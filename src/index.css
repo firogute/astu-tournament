@@ -1,0 +1,271 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ASTU 4th Year Championship Design System - NO BLUE/PINK/PURPLE */
+
+@layer base {
+  :root {
+    /* Light Mode - Forest Green & Terracotta Orange */
+    --background: 0 0% 97%;
+    --foreground: 0 0% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 18%;
+
+    /* Primary: Forest Green */
+    --primary: 120 61% 34%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 120 65% 45%;
+
+    /* Secondary: Terracotta Orange */
+    --secondary: 9 62% 62%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-glow: 9 70% 72%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 36 88% 65%;
+    --accent-foreground: 0 0% 18%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 89%;
+    --input: 0 0% 89%;
+    --ring: 120 61% 34%;
+
+    --radius: 0.75rem;
+
+    /* Match status colors */
+    --live: 0 72% 51%;
+    --live-glow: 0 72% 61%;
+    --win: 120 61% 34%;
+    --draw: 36 88% 65%;
+    --loss: 0 0% 60%;
+
+    /* Glass morphism */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.2;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(120 61% 34%), hsl(120 65% 45%));
+    --gradient-secondary: linear-gradient(135deg, hsl(9 62% 62%), hsl(9 70% 72%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 97%), hsl(120 30% 95%));
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px hsl(120 61% 34% / 0.1);
+    --shadow-md: 0 4px 16px hsl(120 61% 34% / 0.15);
+    --shadow-lg: 0 12px 32px hsl(120 61% 34% / 0.2);
+    --shadow-glow: 0 0 24px hsl(120 65% 45% / 0.4);
+    --shadow-orange: 0 4px 16px hsl(9 62% 62% / 0.3);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .dark {
+    /* Dark Mode - Electric Green & Burnt Sienna */
+    --background: 0 0% 10%;
+    --foreground: 0 0% 88%;
+
+    --card: 0 0% 18%;
+    --card-foreground: 0 0% 88%;
+
+    --popover: 0 0% 18%;
+    --popover-foreground: 0 0% 88%;
+
+    /* Primary: Electric/Lime Green */
+    --primary: 120 100% 50%;
+    --primary-foreground: 0 0% 10%;
+    --primary-glow: 120 100% 60%;
+
+    /* Secondary: Burnt Sienna */
+    --secondary: 16 67% 61%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-glow: 16 70% 71%;
+
+    --muted: 0 0% 22%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 36 88% 55%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 120 100% 50%;
+
+    /* Glass morphism dark */
+    --glass-bg: 0 0% 10% / 0.7;
+    --glass-border: 0 0% 100% / 0.1;
+
+    /* Gradients dark */
+    --gradient-primary: linear-gradient(135deg, hsl(120 100% 50%), hsl(120 100% 60%));
+    --gradient-secondary: linear-gradient(135deg, hsl(16 67% 61%), hsl(16 70% 71%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 10%), hsl(120 40% 12%));
+
+    /* Shadows dark */
+    --shadow-sm: 0 2px 8px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 16px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 12px 32px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 32px hsl(120 100% 50% / 0.3);
+    --shadow-orange: 0 4px 16px hsl(16 67% 61% / 0.4);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl font-bold;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl font-semibold;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl font-semibold;
+  }
+}
+
+@layer utilities {
+  /* Glass morphism effect */
+  .glass {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  /* Hover lift effect */
+  .hover-lift {
+    transition: var(--transition-smooth);
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Hover scale effect */
+  .hover-scale {
+    transition: var(--transition-smooth);
+  }
+  .hover-scale:hover {
+    transform: scale(1.05);
+  }
+
+  /* Pulsating live indicator */
+  @keyframes pulse-live {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.1);
+    }
+  }
+  .pulse-live {
+    animation: pulse-live 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Underline animation */
+  .link-underline {
+    position: relative;
+    display: inline-block;
+  }
+  .link-underline::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    bottom: -2px;
+    left: 0;
+    background: hsl(var(--secondary));
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease;
+  }
+  .link-underline:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* Score animation */
+  @keyframes score-pop {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .score-pop {
+    animation: score-pop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  /* Fade in animation */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
+
+  /* Slide in animation */
+  @keyframes slide-in {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  .slide-in {
+    animation: slide-in 0.4s ease-out;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
