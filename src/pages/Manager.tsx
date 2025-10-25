@@ -1,24 +1,23 @@
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Calendar, Users, Trophy, TrendingUp } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar, Users, Trophy, TrendingUp } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Manager = () => {
   const { user } = useAuth();
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="mb-12">
-        <h1 className="text-5xl font-display font-bold mb-4 fade-in">
+      <div className="mb-12 text-center md:text-left">
+        <h1 className="text-4xl md:text-5xl font-display font-bold mb-4 fade-in">
           Manager Dashboard
         </h1>
-        <p className="text-xl text-muted-foreground fade-in">
+        <p className="text-lg md:text-xl text-muted-foreground fade-in">
           Welcome back, {user?.email}
         </p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid md:grid-cols-4 gap-6 mb-12 fade-in">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 fade-in">
         <Card className="p-6 hover-lift">
           <div className="flex items-center justify-between mb-4">
             <Users className="h-8 w-8 text-primary" />
@@ -52,21 +51,18 @@ const Manager = () => {
         </Card>
       </div>
 
-      {/* Main Content */}
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* Squad Management */}
         <Card className="p-8 fade-in">
           <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-2">
             <Users className="h-6 w-6 text-primary" />
             Squad Management
           </h2>
           <p className="text-muted-foreground mb-6">
-            Manage your team roster, add new players, and update player information.
+            Manage your team roster, add new players, and update player
+            information.
           </p>
           <div className="space-y-3">
-            <Button className="w-full" variant="default">
-              View Squad
-            </Button>
+            <Button className="w-full">View Squad</Button>
             <Button className="w-full" variant="outline">
               Add New Player
             </Button>
@@ -76,7 +72,6 @@ const Manager = () => {
           </div>
         </Card>
 
-        {/* Match Lineup */}
         <Card className="p-8 fade-in">
           <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-2">
             <Calendar className="h-6 w-6 text-secondary" />
@@ -86,9 +81,7 @@ const Manager = () => {
             Set your starting XI and formation for upcoming matches.
           </p>
           <div className="space-y-3">
-            <Button className="w-full" variant="default">
-              Set Lineup
-            </Button>
+            <Button className="w-full">Set Lineup</Button>
             <Button className="w-full" variant="outline">
               View Formation
             </Button>
@@ -99,17 +92,18 @@ const Manager = () => {
         </Card>
       </div>
 
-      {/* Next Match */}
       <Card className="mt-8 p-8 bg-gradient-primary text-primary-foreground fade-in">
         <h2 className="text-2xl font-display font-bold mb-4">Next Match</h2>
-        <div className="flex items-center justify-between flex-wrap gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
-            <div className="text-3xl font-bold mb-2">vs Computer Science</div>
-            <div className="text-lg opacity-90">
+            <div className="text-2xl md:text-3xl font-bold mb-2">
+              vs Computer Science
+            </div>
+            <div className="text-base md:text-lg opacity-90">
               October 26, 2025 • 16:30 • ASTU Main Stadium
             </div>
           </div>
-          <Button variant="secondary" size="lg">
+          <Button variant="secondary" size="lg" className="w-full sm:w-auto">
             Prepare Lineup
           </Button>
         </div>
