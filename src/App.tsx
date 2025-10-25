@@ -20,6 +20,7 @@ import Manager from "./pages/Manager";
 import Admin from "./pages/Admin";
 import Commentary from "./pages/Commentary";
 import NotFound from "./pages/NotFound";
+import { Footer } from "./pages/Footer";
 
 const queryClient = new QueryClient();
 
@@ -43,32 +44,33 @@ const App = () => (
                 <Route path="/top-assists" element={<TopAssistsPage />} />
                 <Route path="/match/:id" element={<MatchDetails />} />
                 <Route path="/player/:id" element={<PlayerProfile />} />
-                <Route 
-                  path="/manager" 
+                <Route
+                  path="/manager"
                   element={
-                    <ProtectedRoute allowedRoles={['manager']}>
+                    <ProtectedRoute allowedRoles={["manager"]}>
                       <Manager />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/admin" 
+                <Route
+                  path="/admin"
                   element={
-                    <ProtectedRoute allowedRoles={['admin']}>
+                    <ProtectedRoute allowedRoles={["admin"]}>
                       <Admin />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/commentary" 
+                <Route
+                  path="/commentary"
                   element={
-                    <ProtectedRoute allowedRoles={['commentator', 'admin']}>
+                    <ProtectedRoute allowedRoles={["commentator", "admin"]}>
                       <Commentary />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <Footer />
             </div>
           </BrowserRouter>
         </TooltipProvider>

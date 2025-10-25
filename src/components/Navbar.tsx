@@ -60,7 +60,7 @@ export function Navbar() {
                 alt="ASTU Tournament"
                 className="h-12 w-auto sm:h-16 lg:h-20 object-contain transition-transform group-hover:scale-110"
               />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full border-2 border-white dark:border-slate-900"></div>
+              <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full border border-white dark:border-slate-900"></div>
             </div>
             <div className="hidden sm:block">
               <div className="font-bold text-lg sm:text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
