@@ -7,8 +7,11 @@ import playersRoutes from "./routes/players.ts";
 import matchesRoutes from "./routes/matches.ts";
 import teamsRoutes from "./routes/teams.ts";
 import tournamentsRoutes from "./routes/tournaments.ts";
-import matchStatsRoutes from "./routes/matchstats.ts";
+import matchStatsRoutes from "./routes/matchStats.ts";
 import playerMatchStatsRoutes from "./routes/playerMatchStats.ts";
+import matchEventsRoutes from "./routes/matchEvents.ts";
+import commentaryRoutes from "./routes/commentary.ts";
+import teamStandingsRoutes from "./routes/teamStandings.ts";
 
 dotenv.config();
 
@@ -24,6 +27,9 @@ app.use("/api/teams", teamsRoutes);
 app.use("/api/tournaments", tournamentsRoutes);
 app.use("/api/match-stats", matchStatsRoutes);
 app.use("/api/player-match-stats", playerMatchStatsRoutes);
+app.use("/api/match-events", matchEventsRoutes);
+app.use("/api/commentary", commentaryRoutes);
+app.use("/api/team-standings", teamStandingsRoutes);
 
 // Example route
 app.get("/", (req, res) => {
