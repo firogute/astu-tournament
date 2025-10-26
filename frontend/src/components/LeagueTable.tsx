@@ -52,44 +52,83 @@ export function LeagueTable({ teams }: LeagueTableProps) {
         <Table className="w-full">
           <TableHeader>
             <TableRow className="bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700">
-              <TableHead className="w-10 sm:w-12 px-2 sm:px-4 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300">
+              <TableHead
+                key="pos"
+                className="w-10 sm:w-12 px-2 sm:px-4 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300"
+              >
                 Pos
               </TableHead>
-              <TableHead className="px-2 sm:px-4 py-3 font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 min-w-[120px] sm:min-w-[150px]">
+              <TableHead
+                key="team"
+                className="px-2 sm:px-4 py-3 font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 min-w-[120px] sm:min-w-[150px]"
+              >
                 Team
               </TableHead>
-              <TableHead className="w-10 px-2 py-3 text-center font-bold text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300 sm:hidden">
+              <TableHead
+                key="p-mobile"
+                className="w-10 px-2 py-3 text-center font-bold text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300 sm:hidden"
+              >
                 P
               </TableHead>
-              <TableHead className="w-12 px-2 py-3 text-center font-bold text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300 sm:hidden">
+              <TableHead
+                key="gd-mobile"
+                className="w-12 px-2 py-3 text-center font-bold text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300 sm:hidden"
+              >
                 GD
               </TableHead>
-              <TableHead className="w-14 px-2 py-3 text-center font-bold text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300 sm:hidden">
+              <TableHead
+                key="pts-mobile"
+                className="w-14 px-2 py-3 text-center font-bold text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300 sm:hidden"
+              >
                 Pts
               </TableHead>
               {/* Desktop columns */}
-              <TableHead className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
+              <TableHead
+                key="p-desktop"
+                className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell"
+              >
                 P
               </TableHead>
-              <TableHead className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
+              <TableHead
+                key="w-desktop"
+                className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell"
+              >
                 W
               </TableHead>
-              <TableHead className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
+              <TableHead
+                key="d-desktop"
+                className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell"
+              >
                 D
               </TableHead>
-              <TableHead className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
+              <TableHead
+                key="l-desktop"
+                className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell"
+              >
                 L
               </TableHead>
-              <TableHead className="w-10 sm:w-12 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
+              <TableHead
+                key="gf-desktop"
+                className="w-10 sm:w-12 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell"
+              >
                 GF
               </TableHead>
-              <TableHead className="w-10 sm:w-12 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
+              <TableHead
+                key="ga-desktop"
+                className="w-10 sm:w-12 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell"
+              >
                 GA
               </TableHead>
-              <TableHead className="w-10 sm:w-12 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
+              <TableHead
+                key="gd-desktop"
+                className="w-10 sm:w-12 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell"
+              >
                 GD
               </TableHead>
-              <TableHead className="w-12 sm:w-14 px-2 sm:px-3 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
+              <TableHead
+                key="pts-desktop"
+                className="w-12 sm:w-14 px-2 sm:px-3 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell"
+              >
                 Pts
               </TableHead>
             </TableRow>
@@ -97,7 +136,7 @@ export function LeagueTable({ teams }: LeagueTableProps) {
           <TableBody>
             {sortedTeams.map((team, index) => (
               <TableRow
-                key={team.id}
+                key={index}
                 className={`transition-all duration-200 ${getRankColor(
                   index
                 )} group`}

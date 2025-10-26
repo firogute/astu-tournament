@@ -89,18 +89,18 @@ const Index = () => {
         // Using Axios - much cleaner!
         const [matchesRes, teamsRes, playersRes, standingsRes] =
           await Promise.all([
-            apiClient.get("/matches"),
-            apiClient.get("/teams"),
-            apiClient.get("/players"),
+            apiClient.get("matches"),
+            apiClient.get("teams"),
+            apiClient.get("players"),
             apiClient.get(
-              "/team/standings/10fc1f14-88d1-4549-a703-5186dad81d70"
+              "team/standings/10fc1f14-88d1-4549-a703-5186dad81d70"
             ),
           ]);
 
-        setMatches(matchesRes.data.matches || []);
+        setMatches(matchesRes.data || []);
         setTeams(teamsRes.data.teams || []);
         setPlayers(playersRes.data.players || []);
-        setStandings(standingsRes.data.standings || []);
+        setStandings(standingsRes.data || []);
       } catch (err) {
         console.error("API Error:", err);
         setError(

@@ -1,11 +1,13 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080/api/";
+
+//localhost:8080/api/team/standings/10fc1f14-88d1-4549-a703-5186dad81d70
 
 // Create axios instance with default config
 const apiClient = axios.create({
   baseURL: API_BASE,
-  timeout: 10000,
+  timeout: 100000,
   headers: {
     "Content-Type": "application/json",
   },
