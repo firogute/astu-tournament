@@ -3,50 +3,44 @@ import { supabase } from "../lib/supabaseClient.ts";
 import {
   authenticateJWT,
   authorizeRoles,
-  type AuthRequest,
+  AuthRequest,
 } from "../middleware/auth.ts";
 
-const router: Router = Router();
+const router = Router();
 
-// Get commentary for a match
+// Get all events for a match
 router.get("/:matchId", authenticateJWT, async (req, res) => {
   try {
     const { matchId } = req.params;
     const { data, error } = await supabase
-      .from("commentary")
+      .from("match_events")
       .select("*")
       .eq("match_id", matchId)
       .order("minute", { ascending: true });
 
     if (error) return res.status(400).json({ error: error.message });
-    res.json({ commentary: data });
+    res.json({ events: data });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Add commentary (admin/manager/commentator)
+// Add a new match event (admin/manager only)
 router.post(
   "/:matchId",
   authenticateJWT,
-  authorizeRoles("admin", "manager", "commentator"),
-  async (req: AuthRequest, res) => {
+  authorizeRoles("admin", "manager"),
+  async (req, res) => {
     try {
       const { matchId } = req.params;
-      const commentaryData = {
-        ...req.body,
-        match_id: matchId,
-        created_by: req.user!.id,
-      };
+      const eventData = { ...req.body, match_id: matchId };
       const { data, error } = await supabase
-        .from("commentary")
-        .insert(commentaryData, { returning: "representation" });
+        .from("match_events")
+        .insert(eventData, { returning: "representation" });
 
       if (error) return res.status(400).json({ error: error.message });
-      res
-        .status(201)
-        .json({ message: "Commentary added", commentary: data[0] });
+      res.status(201).json({ message: "Event added", event: data[0] });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Server error" });
@@ -54,24 +48,25 @@ router.post(
   }
 );
 
-// Update commentary (admin only)
+// Update a match event (admin only)
 router.put(
-  "/:commentId",
+  "/:eventId",
   authenticateJWT,
   authorizeRoles("admin"),
   async (req, res) => {
     try {
-      const { commentId } = req.params;
+      const { eventId } = req.params;
       const { data, error } = await supabase
-        .from("commentary")
+        .from("match_events")
         .update(req.body)
-        .eq("id", commentId)
+        .eq("id", eventId)
         .select();
+
       if (error || !data)
         return res
           .status(400)
           .json({ error: error?.message ?? "Update failed" });
-      res.json({ message: "Commentary updated", commentary: data[0] });
+      res.json({ message: "Event updated", event: data[0] });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Server error" });
@@ -79,20 +74,20 @@ router.put(
   }
 );
 
-// Delete commentary (admin only)
+// Delete a match event (admin only)
 router.delete(
-  "/:commentId",
+  "/:eventId",
   authenticateJWT,
   authorizeRoles("admin"),
   async (req, res) => {
     try {
-      const { commentId } = req.params;
+      const { eventId } = req.params;
       const { error } = await supabase
-        .from("commentary")
+        .from("match_events")
         .delete()
-        .eq("id", commentId);
+        .eq("id", eventId);
       if (error) return res.status(400).json({ error: error.message });
-      res.json({ message: "Commentary deleted" });
+      res.json({ message: "Event deleted" });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Server error" });

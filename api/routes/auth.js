@@ -1,9 +1,9 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { supabase } from "../lib/supabaseClient.ts";
+import { supabase } from "../lib/supabaseClient";
 
-const router: Router = Router();
+const router = Router();
 
 // Register route
 router.post("/register", async (req, res) => {
@@ -57,7 +57,7 @@ router.post("/login", async (req, res) => {
 
     const token = jwt.sign(
       { id: data.id, role: data.role },
-      process.env.JWT_SECRET!,
+      process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 

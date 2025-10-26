@@ -1,46 +1,52 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabaseClient.ts";
+import { supabase } from "../lib/supabaseClient";
 import {
   authenticateJWT,
   authorizeRoles,
-  type AuthRequest,
+  AuthRequest,
 } from "../middleware/auth.ts";
 
-const router: Router = Router();
+const router = Router();
 
-// Get all events for a match
+// Get commentary for a match
 router.get("/:matchId", authenticateJWT, async (req, res) => {
   try {
     const { matchId } = req.params;
     const { data, error } = await supabase
-      .from("match_events")
+      .from("commentary")
       .select("*")
       .eq("match_id", matchId)
       .order("minute", { ascending: true });
 
     if (error) return res.status(400).json({ error: error.message });
-    res.json({ events: data });
+    res.json({ commentary: data });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Add a new match event (admin/manager only)
+// Add commentary (admin/manager/commentator)
 router.post(
   "/:matchId",
   authenticateJWT,
-  authorizeRoles("admin", "manager"),
-  async (req: AuthRequest, res) => {
+  authorizeRoles("admin", "manager", "commentator"),
+  async (req, res) => {
     try {
       const { matchId } = req.params;
-      const eventData = { ...req.body, match_id: matchId };
+      const commentaryData = {
+        ...req.body,
+        match_id: matchId,
+        created_by: req.user.id,
+      };
       const { data, error } = await supabase
-        .from("match_events")
-        .insert(eventData, { returning: "representation" });
+        .from("commentary")
+        .insert(commentaryData, { returning: "representation" });
 
       if (error) return res.status(400).json({ error: error.message });
-      res.status(201).json({ message: "Event added", event: data[0] });
+      res
+        .status(201)
+        .json({ message: "Commentary added", commentary: data[0] });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Server error" });
@@ -48,46 +54,45 @@ router.post(
   }
 );
 
-// Update a match event (admin only)
+// Update commentary (admin only)
 router.put(
-  "/:eventId",
-  authenticateJWT,
-  authorizeRoles("admin"),
-  async (req: AuthRequest, res) => {
-    try {
-      const { eventId } = req.params;
-      const { data, error } = await supabase
-        .from("match_events")
-        .update(req.body)
-        .eq("id", eventId)
-        .select();
-
-      if (error || !data)
-        return res
-          .status(400)
-          .json({ error: error?.message ?? "Update failed" });
-      res.json({ message: "Event updated", event: data[0] });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Server error" });
-    }
-  }
-);
-
-// Delete a match event (admin only)
-router.delete(
-  "/:eventId",
+  "/:commentId",
   authenticateJWT,
   authorizeRoles("admin"),
   async (req, res) => {
     try {
-      const { eventId } = req.params;
+      const { commentId } = req.params;
+      const { data, error } = await supabase
+        .from("commentary")
+        .update(req.body)
+        .eq("id", commentId)
+        .select();
+      if (error || !data)
+        return res
+          .status(400)
+          .json({ error: error?.message ?? "Update failed" });
+      res.json({ message: "Commentary updated", commentary: data[0] });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// Delete commentary (admin only)
+router.delete(
+  "/:commentId",
+  authenticateJWT,
+  authorizeRoles("admin"),
+  async (req, res) => {
+    try {
+      const { commentId } = req.params;
       const { error } = await supabase
-        .from("match_events")
+        .from("commentary")
         .delete()
-        .eq("id", eventId);
+        .eq("id", commentId);
       if (error) return res.status(400).json({ error: error.message });
-      res.json({ message: "Event deleted" });
+      res.json({ message: "Commentary deleted" });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Server error" });

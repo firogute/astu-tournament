@@ -15,6 +15,7 @@ interface LeagueTableProps {
 }
 
 export function LeagueTable({ teams }: LeagueTableProps) {
+  console.log(teams);
   const sortedTeams = [...teams].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     if (b.goalDifference !== a.goalDifference)

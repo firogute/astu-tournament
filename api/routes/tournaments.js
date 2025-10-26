@@ -3,10 +3,10 @@ import { supabase } from "../lib/supabaseClient.ts";
 import {
   authenticateJWT,
   authorizeRoles,
-  type AuthRequest,
+  AuthRequest,
 } from "../middleware/auth.ts";
 
-const router: Router = Router();
+const router = Router();
 
 // Get all tournaments
 router.get("/", authenticateJWT, async (req, res) => {
@@ -39,25 +39,20 @@ router.get("/:id", authenticateJWT, async (req, res) => {
 });
 
 // Create tournament (admin only)
-router.post(
-  "/",
-  authenticateJWT,
-  authorizeRoles("admin"),
-  async (req: AuthRequest, res) => {
-    try {
-      const tournamentData = req.body;
-      const { data, error } = await supabase
-        .from("tournaments")
-        .insert(tournamentData, { returning: "representation" });
-      if (error) return res.status(400).json({ error: error.message });
-      res
-        .status(201)
-        .json({ message: "Tournament created", tournament: data[0] });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Server error" });
-    }
+router.post("/", authenticateJWT, authorizeRoles("admin"), async (req, res) => {
+  try {
+    const tournamentData = req.body;
+    const { data, error } = await supabase
+      .from("tournaments")
+      .insert(tournamentData, { returning: "representation" });
+    if (error) return res.status(400).json({ error: error.message });
+    res
+      .status(201)
+      .json({ message: "Tournament created", tournament: data[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
-);
+});
 
 export default router;

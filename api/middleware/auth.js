@@ -1,25 +1,11 @@
-import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET!;
-interface JwtPayload {
-  id: string;
-  email: string;
-  role: "admin" | "manager" | "commentator";
-}
+const JWT_SECRET = process.env.JWT_SECRET;
 
-export interface AuthRequest extends Request {
-  user?: JwtPayload;
-}
-
-export const authenticateJWT = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -33,7 +19,7 @@ export const authenticateJWT = (
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -42,8 +28,8 @@ export const authenticateJWT = (
 };
 
 // Role-based access
-export const authorizeRoles = (...roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
     }

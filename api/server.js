@@ -2,16 +2,16 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-import authRoutes from "./routes/auth.ts";
-import playersRoutes from "./routes/players.ts";
-import matchesRoutes from "./routes/matches.ts";
-import teamsRoutes from "./routes/teams.ts";
-import tournamentsRoutes from "./routes/tournaments.ts";
-import matchStatsRoutes from "./routes/matchStats.ts";
-import playerMatchStatsRoutes from "./routes/playerMatchStats.ts";
-import matchEventsRoutes from "./routes/matchEvents.ts";
-import commentaryRoutes from "./routes/commentary.ts";
-import teamStandingsRoutes from "./routes/teamStandings.ts";
+import authRoutes from "./routes/auth";
+import playersRoutes from "./routes/players";
+import matchesRoutes from "./routes/matches";
+import teamsRoutes from "./routes/teams";
+import tournamentsRoutes from "./routes/tournaments";
+import matchStatsRoutes from "./routes/matchStats";
+import playerMatchStatsRoutes from "./routes/playerMatchStats";
+import matchEventsRoutes from "./routes/matchEvents";
+import commentaryRoutes from "./routes/commentary";
+import teamStandingsRoutes from "./routes/teamStandings";
 
 dotenv.config();
 
@@ -38,5 +38,5 @@ app.get("/", (req, res) => {
 
 // TODO: Add your auth, matches, players routes here
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 6000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabaseClient.ts";
+import { supabase } from "../lib/supabaseClient";
 import {
   authenticateJWT,
   authorizeRoles,
-  type AuthRequest,
+  AuthRequest,
 } from "../middleware/auth.ts";
 
-const router: Router = Router();
+const router = Router();
 
 // Get all matches with populated team data
 router.get("/", async (req, res) => {
@@ -137,7 +137,7 @@ router.post(
   "/",
   authenticateJWT,
   authorizeRoles("admin", "manager"),
-  async (req: AuthRequest, res) => {
+  async (req, res) => {
     try {
       const matchData = req.body;
 
