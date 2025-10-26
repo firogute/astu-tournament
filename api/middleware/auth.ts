@@ -1,30 +1,57 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-export const protect = (roles?: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "No token" });
+dotenv.config();
 
-    const token = authHeader.split(" ")[1];
-    if (!token) return res.status(401).json({ error: "No token" });
+const JWT_SECRET = process.env.JWT_SECRET!;
+interface JwtPayload {
+  id: string;
+  email: string;
+  role: "admin" | "manager" | "commentator";
+}
 
-    try {
-      const secret = process.env.JWT_SECRET;
-      if (!secret) {
-        return res
-          .status(500)
-          .json({ error: "Server misconfiguration: JWT_SECRET not set" });
-      }
+export interface AuthRequest extends Request {
+  user?: JwtPayload;
+}
 
-      const decoded: any = jwt.verify(token, secret);
-      if (roles && !roles.includes(decoded.role))
-        return res.status(403).json({ error: "Forbidden" });
+export const authenticateJWT = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
 
-      (req as any).user = decoded;
-      next();
-    } catch (err) {
-      res.status(401).json({ error: "Invalid token" });
+  if (!authHeader) {
+    return res.status(401).json({ message: "Authorization header missing" });
+  }
+
+  const token = authHeader.split(" ")[1]; // Expect "Bearer <token>"
+
+  if (!token) {
+    return res.status(401).json({ message: "Token missing" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
+};
+
+// Role-based access
+export const authorizeRoles = (...roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden: insufficient role" });
+    }
+
+    next();
   };
 };
