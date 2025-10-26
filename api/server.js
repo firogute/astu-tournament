@@ -19,6 +19,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
 // routes
 app.use("/api/auth", authRoutes);
 app.use("/api/players", playersRoutes);
@@ -38,5 +43,5 @@ app.get("/", (req, res) => {
 
 // TODO: Add your auth, matches, players routes here
 
-const PORT = process.env.PORT || 6000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

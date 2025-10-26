@@ -1,10 +1,95 @@
-import { teams } from "@/lib/mockData";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, ArrowRight } from "lucide-react";
+import apiClient from "@/lib/api";
+
+interface Team {
+  id: string;
+  name: string;
+  short_name: string;
+  logo: string;
+  points: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  played: number;
+}
 
 const Teams = () => {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        setLoading(true);
+        // Assuming you have a tournament ID - you might need to adjust this
+        // based on your actual API structure
+        const tournamentId = "10fc1f14-88d1-4549-a703-5186dad81d70"; // Example tournament ID
+        const response = await apiClient.get(`/team/standings/${tournamentId}`);
+        console.log(response.data);
+        setTeams(response.data);
+      } catch (err) {
+        console.error("Error fetching teams:", err);
+        setError("Failed to load teams data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeams();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="text-center">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-300 rounded w-1/3 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-300 rounded w-1/2 mx-auto"></div>
+            </div>
+            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mt-8">
+              {[...Array(6)].map((_, index) => (
+                <Card
+                  key={index}
+                  className="p-6 bg-white/80 dark:bg-slate-900/80 rounded-xl animate-pulse"
+                >
+                  <div className="h-16 bg-gray-300 rounded mb-4"></div>
+                  <div className="h-6 bg-gray-300 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-300 rounded mb-4"></div>
+                  <div className="h-10 bg-gray-300 rounded"></div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-red-600 mb-4">Error</h1>
+            <p className="text-muted-foreground">{error}</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
       <div className="container mx-auto px-3 sm:px-4 lg:px-6">
@@ -46,11 +131,21 @@ const Teams = () => {
 
                 <div className="text-center">
                   <div className="text-5xl sm:text-6xl lg:text-7xl mb-4 sm:mb-6">
-                    {team.logo}
+                    {team.logo ? (
+                      <img
+                        src={team.logo}
+                        alt={team.name}
+                        className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mx-auto rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mx-auto bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+                        {team.name.charAt(0)}
+                      </div>
+                    )}
                   </div>
 
                   <h2 className="text-xl sm:text-2xl lg:text-2xl font-bold text-slate-900 dark:text-white mb-3 sm:mb-4 line-clamp-1">
-                    {team.name}
+                    {team.short_name}
                   </h2>
 
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mb-4 sm:mb-6 text-center">
@@ -86,8 +181,8 @@ const Teams = () => {
             Championship Glory Awaits
           </h2>
           <p className="text-sm sm:text-base lg:text-lg opacity-90 max-w-md sm:max-w-lg lg:max-w-2xl mx-auto leading-relaxed">
-            Six departments competing for ultimate bragging rights. Which team
-            will be crowned the 4th Year Football Champions?
+            {teams.length} departments competing for ultimate bragging rights.
+            Which team will be crowned the 4th Year Football Champions?
           </p>
         </Card>
       </div>

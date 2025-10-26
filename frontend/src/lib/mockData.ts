@@ -3,6 +3,7 @@
 export interface Team {
   id: string;
   name: string;
+  short_name: string;
   logo: string;
   color: string;
   played: number;
@@ -20,7 +21,7 @@ export interface Player {
   name: string;
   team: string;
   teamId: string;
-  position: 'GK' | 'DF' | 'MF' | 'FW';
+  position: "GK" | "DF" | "MF" | "FW";
   jerseyNumber: number;
   photo: string;
   goals: number;
@@ -33,7 +34,15 @@ export interface Player {
 
 export interface MatchEvent {
   id: string;
-  type: 'goal' | 'yellow_card' | 'red_card' | 'substitution' | 'penalty' | 'corner' | 'offside' | 'foul';
+  type:
+    | "goal"
+    | "yellow_card"
+    | "red_card"
+    | "substitution"
+    | "penalty"
+    | "corner"
+    | "offside"
+    | "foul";
   minute: number;
   playerId: string;
   playerName: string;
@@ -49,7 +58,13 @@ export interface Match {
   awayTeam: Team;
   homeScore: number;
   awayScore: number;
-  status: 'scheduled' | 'live' | 'first_half' | 'half_time' | 'second_half' | 'finished';
+  status:
+    | "scheduled"
+    | "live"
+    | "first_half"
+    | "half_time"
+    | "second_half"
+    | "finished";
   date: string;
   time: string;
   venue: string;
@@ -73,10 +88,10 @@ export interface Match {
 // Mock Teams
 export const teams: Team[] = [
   {
-    id: 'team-1',
-    name: 'Software Engineering',
-    logo: '⚡',
-    color: 'hsl(120 61% 34%)',
+    id: "team-1",
+    name: "Software Engineering",
+    logo: "⚡",
+    color: "hsl(120 61% 34%)",
     played: 5,
     won: 4,
     drawn: 1,
@@ -87,10 +102,10 @@ export const teams: Team[] = [
     points: 13,
   },
   {
-    id: 'team-2',
-    name: 'Computer Science',
-    logo: '💻',
-    color: 'hsl(9 62% 62%)',
+    id: "team-2",
+    name: "Computer Science",
+    logo: "💻",
+    color: "hsl(9 62% 62%)",
     played: 5,
     won: 3,
     drawn: 2,
@@ -101,10 +116,10 @@ export const teams: Team[] = [
     points: 11,
   },
   {
-    id: 'team-3',
-    name: 'Information Systems',
-    logo: '📊',
-    color: 'hsl(36 88% 65%)',
+    id: "team-3",
+    name: "Information Systems",
+    logo: "📊",
+    color: "hsl(36 88% 65%)",
     played: 5,
     won: 3,
     drawn: 1,
@@ -115,10 +130,10 @@ export const teams: Team[] = [
     points: 10,
   },
   {
-    id: 'team-4',
-    name: 'Information Technology',
-    logo: '🔧',
-    color: 'hsl(16 67% 61%)',
+    id: "team-4",
+    name: "Information Technology",
+    logo: "🔧",
+    color: "hsl(16 67% 61%)",
     played: 5,
     won: 2,
     drawn: 1,
@@ -129,10 +144,10 @@ export const teams: Team[] = [
     points: 7,
   },
   {
-    id: 'team-5',
-    name: 'Network Engineering',
-    logo: '🌐',
-    color: 'hsl(120 45% 45%)',
+    id: "team-5",
+    name: "Network Engineering",
+    logo: "🌐",
+    color: "hsl(120 45% 45%)",
     played: 5,
     won: 1,
     drawn: 2,
@@ -143,10 +158,10 @@ export const teams: Team[] = [
     points: 5,
   },
   {
-    id: 'team-6',
-    name: 'Cybersecurity',
-    logo: '🔒',
-    color: 'hsl(0 72% 51%)',
+    id: "team-6",
+    name: "Cybersecurity",
+    logo: "🔒",
+    color: "hsl(0 72% 51%)",
     played: 5,
     won: 0,
     drawn: 1,
@@ -161,13 +176,13 @@ export const teams: Team[] = [
 // Mock Players
 export const players: Player[] = [
   {
-    id: 'p1',
-    name: 'Abebe Kebede',
-    team: 'Software Engineering',
-    teamId: 'team-1',
-    position: 'FW',
+    id: "p1",
+    name: "Abebe Kebede",
+    team: "Software Engineering",
+    teamId: "team-1",
+    position: "FW",
     jerseyNumber: 10,
-    photo: '⚽',
+    photo: "⚽",
     goals: 8,
     assists: 4,
     yellowCards: 1,
@@ -176,13 +191,13 @@ export const players: Player[] = [
     minutesPlayed: 450,
   },
   {
-    id: 'p2',
-    name: 'Dawit Tesfaye',
-    team: 'Computer Science',
-    teamId: 'team-2',
-    position: 'FW',
+    id: "p2",
+    name: "Dawit Tesfaye",
+    team: "Computer Science",
+    teamId: "team-2",
+    position: "FW",
     jerseyNumber: 9,
-    photo: '⚽',
+    photo: "⚽",
     goals: 6,
     assists: 3,
     yellowCards: 0,
@@ -191,13 +206,13 @@ export const players: Player[] = [
     minutesPlayed: 430,
   },
   {
-    id: 'p3',
-    name: 'Yonas Alemayehu',
-    team: 'Information Systems',
-    teamId: 'team-3',
-    position: 'MF',
+    id: "p3",
+    name: "Yonas Alemayehu",
+    team: "Information Systems",
+    teamId: "team-3",
+    position: "MF",
     jerseyNumber: 8,
-    photo: '⚽',
+    photo: "⚽",
     goals: 4,
     assists: 6,
     yellowCards: 2,
@@ -206,13 +221,13 @@ export const players: Player[] = [
     minutesPlayed: 450,
   },
   {
-    id: 'p4',
-    name: 'Biniam Haile',
-    team: 'Software Engineering',
-    teamId: 'team-1',
-    position: 'MF',
+    id: "p4",
+    name: "Biniam Haile",
+    team: "Software Engineering",
+    teamId: "team-1",
+    position: "MF",
     jerseyNumber: 7,
-    photo: '⚽',
+    photo: "⚽",
     goals: 3,
     assists: 5,
     yellowCards: 1,
@@ -225,50 +240,50 @@ export const players: Player[] = [
 // Mock Matches
 export const matches: Match[] = [
   {
-    id: 'm1',
+    id: "m1",
     homeTeam: teams[0],
     awayTeam: teams[1],
     homeScore: 2,
     awayScore: 1,
-    status: 'live',
-    date: '2025-10-25',
-    time: '15:00',
-    venue: 'ASTU Main Stadium',
+    status: "live",
+    date: "2025-10-25",
+    time: "15:00",
+    venue: "ASTU Main Stadium",
     minute: 67,
     events: [
       {
-        id: 'e1',
-        type: 'goal',
+        id: "e1",
+        type: "goal",
         minute: 23,
-        playerId: 'p1',
-        playerName: 'Abebe Kebede',
-        teamId: 'team-1',
-        assistId: 'p4',
-        assistName: 'Biniam Haile',
+        playerId: "p1",
+        playerName: "Abebe Kebede",
+        teamId: "team-1",
+        assistId: "p4",
+        assistName: "Biniam Haile",
       },
       {
-        id: 'e2',
-        type: 'goal',
+        id: "e2",
+        type: "goal",
         minute: 45,
-        playerId: 'p2',
-        playerName: 'Dawit Tesfaye',
-        teamId: 'team-2',
+        playerId: "p2",
+        playerName: "Dawit Tesfaye",
+        teamId: "team-2",
       },
       {
-        id: 'e3',
-        type: 'yellow_card',
+        id: "e3",
+        type: "yellow_card",
         minute: 52,
-        playerId: 'p3',
-        playerName: 'Yonas Alemayehu',
-        teamId: 'team-2',
+        playerId: "p3",
+        playerName: "Yonas Alemayehu",
+        teamId: "team-2",
       },
       {
-        id: 'e4',
-        type: 'goal',
+        id: "e4",
+        type: "goal",
         minute: 61,
-        playerId: 'p1',
-        playerName: 'Abebe Kebede',
-        teamId: 'team-1',
+        playerId: "p1",
+        playerName: "Abebe Kebede",
+        teamId: "team-1",
       },
     ],
     stats: {
@@ -282,15 +297,15 @@ export const matches: Match[] = [
     },
   },
   {
-    id: 'm2',
+    id: "m2",
     homeTeam: teams[2],
     awayTeam: teams[3],
     homeScore: 3,
     awayScore: 1,
-    status: 'finished',
-    date: '2025-10-24',
-    time: '14:00',
-    venue: 'ASTU Training Ground',
+    status: "finished",
+    date: "2025-10-24",
+    time: "14:00",
+    venue: "ASTU Training Ground",
     events: [],
     stats: {
       possession: [55, 45],
@@ -303,15 +318,15 @@ export const matches: Match[] = [
     },
   },
   {
-    id: 'm3',
+    id: "m3",
     homeTeam: teams[4],
     awayTeam: teams[5],
     homeScore: 0,
     awayScore: 0,
-    status: 'scheduled',
-    date: '2025-10-26',
-    time: '16:30',
-    venue: 'ASTU Main Stadium',
+    status: "scheduled",
+    date: "2025-10-26",
+    time: "16:30",
+    venue: "ASTU Main Stadium",
     events: [],
     stats: {
       possession: [50, 50],

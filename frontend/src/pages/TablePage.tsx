@@ -1,9 +1,33 @@
-import { teams } from "@/lib/mockData";
+import { useState, useEffect } from "react";
 import { LeagueTable } from "@/components/LeagueTable";
 import { Card } from "@/components/ui/card";
 import { TrendingUp, Award, Crown, Target, Trophy } from "lucide-react";
+import apiClient from "@/lib/api";
+import { Team } from "@/lib/mockData";
 
 const TablePage = () => {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        setLoading(true);
+        const tournamentId = "10fc1f14-88d1-4549-a703-5186dad81d70"; // Example tournament ID
+        const response = await apiClient.get(`/team/standings/${tournamentId}`);
+        setTeams(response.data);
+      } catch (err) {
+        console.error("Error fetching teams:", err);
+        setError("Failed to load league standings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeams();
+  }, []);
+
   const sortedTeams = [...teams].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     if (b.goalDifference !== a.goalDifference)
@@ -12,6 +36,54 @@ const TablePage = () => {
   });
 
   const leader = sortedTeams[0];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <div className="animate-pulse">
+              <div className="h-10 bg-gray-300 rounded w-1/3 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-300 rounded w-1/2 mx-auto"></div>
+            </div>
+          </div>
+
+          {/* Loading leader card */}
+          <div className="relative mb-6 sm:mb-8 lg:mb-12">
+            <Card className="p-6 bg-white/80 dark:bg-slate-900/80 rounded-2xl animate-pulse">
+              <div className="h-32 bg-gray-300 rounded"></div>
+            </Card>
+          </div>
+
+          {/* Loading table */}
+          <div className="mb-6 sm:mb-8 lg:mb-12">
+            <Card className="p-6 bg-white/80 dark:bg-slate-900/80 rounded-2xl animate-pulse">
+              <div className="h-64 bg-gray-300 rounded"></div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-red-600 mb-4">Error</h1>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
@@ -46,9 +118,17 @@ const TablePage = () => {
                       🏆 Current Leader
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                      <span className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl">
-                        {leader.logo}
-                      </span>
+                      {leader.logo ? (
+                        <img
+                          src={leader.logo}
+                          alt={leader.name}
+                          className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                          {leader.name.charAt(0)}
+                        </div>
+                      )}
                       <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold drop-shadow-md">
                         {leader.name}
                       </div>
@@ -69,7 +149,8 @@ const TablePage = () => {
                   </div>
                   <div className="text-center bg-white/20 p-3 sm:p-4 rounded-xl backdrop-blur-sm min-w-20">
                     <div className="text-2xl sm:text-3xl lg:text-4xl font-black drop-shadow-md">
-                      +{leader.goalDifference}
+                      {leader.goalDifference > 0 ? "+" : ""}
+                      {leader.goalDifference}
                     </div>
                     <div className="text-xs sm:text-sm opacity-90 font-medium">
                       GD

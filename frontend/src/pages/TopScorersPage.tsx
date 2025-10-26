@@ -1,11 +1,42 @@
-import { players } from "@/lib/mockData";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Trophy, Target, Crown, Star, Award } from "lucide-react";
+import apiClient from "@/lib/api";
+
+interface Player {
+  player_id: string;
+  name: string;
+  team_id: string;
+  goals: number;
+  team?: string;
+  assists?: number;
+  appearances?: number;
+  minutesPlayed?: number;
+}
 
 const TopScorersPage = () => {
-  const sortedPlayers = [...players].sort((a, b) => b.goals - a.goals);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const getRankBadge = (index) => {
+  useEffect(() => {
+    const fetchTopScorers = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get("/players/top-scorers?limit=20");
+        setPlayers(response.data.topScorers);
+      } catch (err) {
+        console.error("Error fetching top scorers:", err);
+        setError("Failed to load top scorers data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTopScorers();
+  }, []);
+
+  const getRankBadge = (index: number) => {
     switch (index) {
       case 0:
         return {
@@ -30,6 +61,59 @@ const TopScorersPage = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <div className="animate-pulse">
+              <div className="h-10 bg-gray-300 rounded w-1/3 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-300 rounded w-1/2 mx-auto"></div>
+            </div>
+          </div>
+
+          {/* Loading leader card */}
+          <div className="relative mb-6 sm:mb-8 lg:mb-12">
+            <Card className="p-6 bg-white/80 dark:bg-slate-900/80 rounded-2xl animate-pulse">
+              <div className="h-32 bg-gray-300 rounded"></div>
+            </Card>
+          </div>
+
+          {/* Loading player cards */}
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+            {[...Array(6)].map((_, index) => (
+              <Card
+                key={index}
+                className="p-6 bg-white/80 dark:bg-slate-900/80 rounded-2xl animate-pulse"
+              >
+                <div className="h-20 bg-gray-300 rounded"></div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-red-600 mb-4">Error</h1>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
       <div className="container mx-auto px-3 sm:px-4 lg:px-6">
@@ -47,7 +131,7 @@ const TopScorersPage = () => {
           </p>
         </div>
 
-        {sortedPlayers[0] && (
+        {players[0] && (
           <div className="relative mb-6 sm:mb-8 lg:mb-12 group">
             <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl sm:rounded-3xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
             <Card className="relative p-4 sm:p-6 lg:p-8 bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-2xl border-0 rounded-2xl sm:rounded-3xl transform group-hover:scale-[1.01] sm:group-hover:scale-[1.02] transition-all duration-300">
@@ -64,16 +148,16 @@ const TopScorersPage = () => {
                       🏆 Golden Boot Leader
                     </div>
                     <div className="text-xl sm:text-2xl lg:text-3xl xl:text-5xl font-bold mb-1 sm:mb-2 drop-shadow-md">
-                      {sortedPlayers[0].name}
+                      {players[0].name}
                     </div>
                     <div className="text-sm sm:text-lg lg:text-xl opacity-90 font-medium">
-                      {sortedPlayers[0].team}
+                      {players[0].team || `Team ${players[0].team_id}`}
                     </div>
                   </div>
                 </div>
                 <div className="text-center mt-4 lg:mt-0">
                   <div className="text-4xl sm:text-5xl lg:text-6xl xl:text-8xl font-black drop-shadow-md">
-                    {sortedPlayers[0].goals}
+                    {players[0].goals}
                   </div>
                   <div className="text-sm sm:text-lg lg:text-xl font-semibold opacity-90">
                     Goals Scored
@@ -85,12 +169,12 @@ const TopScorersPage = () => {
         )}
 
         <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          {sortedPlayers.map((player, index) => {
+          {players.map((player, index) => {
             const RankBadge = getRankBadge(index).icon;
             const rankStyle = getRankBadge(index);
 
             return (
-              <div key={player.id} className="group">
+              <div key={player.player_id} className="group">
                 <Card className="relative p-3 sm:p-4 lg:p-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl sm:hover:shadow-2xl transform hover:scale-[1.01] sm:hover:scale-[1.02] transition-all duration-300 overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-500" />
 
@@ -113,7 +197,7 @@ const TopScorersPage = () => {
                             {player.name}
                           </h3>
                           <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">
-                            {player.team}
+                            {player.team || `Team ${player.team_id}`}
                           </p>
                         </div>
                         <div className="text-right ml-2 sm:ml-3 lg:ml-4">
@@ -124,27 +208,6 @@ const TopScorersPage = () => {
                             Goals
                           </div>
                         </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-4 mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1 font-medium">
-                          <Target className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
-                          {player.assists} assists
-                        </span>
-                        <span className="font-medium hidden xs:inline">
-                          {player.appearances} apps
-                        </span>
-                        <span className="font-medium hidden sm:inline">
-                          {player.minutesPlayed}m
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 xs:hidden">
-                        <span className="text-xs text-muted-foreground font-medium">
-                          {player.appearances} apps
-                        </span>
-                        <span className="text-xs text-muted-foreground font-medium">
-                          {player.minutesPlayed}m
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -163,7 +226,7 @@ const TopScorersPage = () => {
         <div className="text-center mt-8 sm:mt-12 lg:mt-16">
           <div className="inline-flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground bg-white/50 dark:bg-slate-900/50 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-slate-200 dark:border-slate-700">
             <Star className="h-3 w-3 sm:h-4 sm:w-4" />
-            Updated in real-time • {sortedPlayers.length} players ranked
+            Updated in real-time • {players.length} players ranked
           </div>
         </div>
       </div>
