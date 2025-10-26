@@ -1,10 +1,6 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabaseClient.ts";
-import {
-  authenticateJWT,
-  authorizeRoles,
-  AuthRequest,
-} from "../middleware/auth.ts";
+import { supabase } from "../lib/supabaseClient.js";
+import { authenticateJWT, authorizeRoles } from "../middleware/auth.js";
 
 const router = Router();
 

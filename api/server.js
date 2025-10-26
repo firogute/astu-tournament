@@ -2,16 +2,16 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-import authRoutes from "./routes/auth";
-import playersRoutes from "./routes/players";
-import matchesRoutes from "./routes/matches";
-import teamsRoutes from "./routes/teams";
-import tournamentsRoutes from "./routes/tournaments";
-import matchStatsRoutes from "./routes/matchStats";
-import playerMatchStatsRoutes from "./routes/playerMatchStats";
-import matchEventsRoutes from "./routes/matchEvents";
-import commentaryRoutes from "./routes/commentary";
-import teamStandingsRoutes from "./routes/teamStandings";
+import authRoutes from "./routes/auth.js";
+import playersRoutes from "./routes/players.js";
+import matchesRoutes from "./routes/matches.js";
+import teamsRoutes from "./routes/teams.js";
+import tournamentsRoutes from "./routes/tournaments.js";
+import matchStatsRoutes from "./routes/matchStats.js";
+import playerMatchStatsRoutes from "./routes/playerMatchStats.js";
+import matchEventsRoutes from "./routes/matchEvents.js";
+import commentaryRoutes from "./routes/commentary.js";
+import teamStandingsRoutes from "./routes/teamStandings.js";
 
 dotenv.config();
 

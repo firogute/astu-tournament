@@ -11,7 +11,7 @@
     "jsonwebtoken": "^9.0.2"
   },
   "scripts": {
-    "dev": "nodemon --watch api --ext ts --exec npx ts-node ./server.ts"
+    "dev": "nodemon --watch . --ext js server.js"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
