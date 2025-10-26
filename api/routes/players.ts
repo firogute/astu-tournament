@@ -3,13 +3,13 @@ import { supabase } from "../lib/supabaseClient.ts";
 import {
   authenticateJWT,
   authorizeRoles,
-  AuthRequest,
+  type AuthRequest,
 } from "../middleware/auth.ts";
 
 const router: Router = Router();
 
 // Get all players (accessible to all logged-in users)
-router.get("/", authenticateJWT, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase.from("players").select("*");
 
@@ -23,7 +23,7 @@ router.get("/", authenticateJWT, async (req, res) => {
 });
 
 // Get single player by ID
-router.get("/:id", authenticateJWT, async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
 

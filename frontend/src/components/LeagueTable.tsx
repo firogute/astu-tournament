@@ -57,7 +57,6 @@ export function LeagueTable({ teams }: LeagueTableProps) {
               <TableHead className="px-2 sm:px-4 py-3 font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 min-w-[120px] sm:min-w-[150px]">
                 Team
               </TableHead>
-              {/* Mobile-only columns */}
               <TableHead className="w-10 px-2 py-3 text-center font-bold text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300 sm:hidden">
                 P
               </TableHead>
@@ -67,7 +66,6 @@ export function LeagueTable({ teams }: LeagueTableProps) {
               <TableHead className="w-14 px-2 py-3 text-center font-bold text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300 sm:hidden">
                 Pts
               </TableHead>
-
               {/* Desktop columns */}
               <TableHead className="w-8 sm:w-10 px-1 sm:px-2 py-3 text-center font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700 dark:text-slate-300 hidden sm:table-cell">
                 P
@@ -119,8 +117,16 @@ export function LeagueTable({ teams }: LeagueTableProps) {
                 </TableCell>
                 <TableCell className="px-2 sm:px-4 py-3">
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                    <div className="text-xl sm:text-2xl flex-shrink-0">
-                      {team.logo}
+                    <div className="flex-shrink-0">
+                      {team.logo ? (
+                        <img
+                          src={team.logo}
+                          alt={team.name}
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-full" />
+                      )}
                     </div>
                     <span className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base truncate">
                       {team.name}
@@ -128,7 +134,7 @@ export function LeagueTable({ teams }: LeagueTableProps) {
                   </div>
                 </TableCell>
 
-                {/* Mobile-only cells */}
+                {/* Mobile cells */}
                 <TableCell className="px-2 py-3 text-center text-sm font-medium text-slate-700 dark:text-slate-300 sm:hidden">
                   {team.played}
                 </TableCell>

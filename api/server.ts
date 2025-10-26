@@ -29,7 +29,7 @@ app.use("/api/match-stats", matchStatsRoutes);
 app.use("/api/player-match-stats", playerMatchStatsRoutes);
 app.use("/api/match-events", matchEventsRoutes);
 app.use("/api/commentary", commentaryRoutes);
-app.use("/api/team-standings", teamStandingsRoutes);
+app.use("/api/team/standings", teamStandingsRoutes);
 
 // Example route
 app.get("/", (req, res) => {

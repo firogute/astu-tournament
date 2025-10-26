@@ -3,13 +3,13 @@ import { supabase } from "../lib/supabaseClient.ts";
 import {
   authenticateJWT,
   authorizeRoles,
-  AuthRequest,
+  type AuthRequest,
 } from "../middleware/auth.ts";
 
 const router: Router = Router();
 
 // Get standings for a tournament
-router.get("/:tournamentId", authenticateJWT, async (req, res) => {
+router.get("/:tournamentId", async (req, res) => {
   try {
     const { tournamentId } = req.params;
     const { data, error } = await supabase

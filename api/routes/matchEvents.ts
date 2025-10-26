@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient.ts";
 import {
   authenticateJWT,
   authorizeRoles,
-  AuthRequest,
+  type AuthRequest,
 } from "../middleware/auth.ts";
 
 const router: Router = Router();
