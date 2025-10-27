@@ -38,13 +38,14 @@ export function CreateTournamentDialog({
     setLoading(true);
 
     try {
-      const response = await apiClient.post("/admin/tournaments/create", {
+      const response = await apiClient.post("/tournaments", {
         name: formData.name,
         season: formData.season,
         start_date: formData.start_date,
         end_date: formData.end_date,
         rules: formData.rules,
         points_system: { win: 3, draw: 1, loss: 0 },
+        status: "upcoming",
       });
 
       if (response.data.success) {
