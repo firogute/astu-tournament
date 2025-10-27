@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Target,
   Home,
+  LogIn,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -137,35 +138,16 @@ export function Navbar() {
                 </Button>
               </div>
             ) : (
-              <div className="hidden sm:flex items-center gap-2">
-                <Link to="/login?role=manager">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-xl border border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:scale-105 transition-all duration-300 text-xs sm:text-sm font-semibold"
-                  >
-                    Manager
-                  </Button>
-                </Link>
-                <Link to="/login?role=commentator">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-xl border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:scale-105 transition-all duration-300 text-xs sm:text-sm font-semibold"
-                  >
-                    Commentary
-                  </Button>
-                </Link>
-                <Link to="/login?role=admin">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="rounded-xl bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 text-xs sm:text-sm font-semibold border-0"
-                  >
-                    Admin
-                  </Button>
-                </Link>
-              </div>
+              <Link to="/login?role=admin">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 text-xs sm:text-sm font-semibold border-0"
+                >
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Login
+                </Button>
+              </Link>
             )}
 
             {/* Mobile Menu Trigger */}
@@ -229,35 +211,14 @@ export function Navbar() {
 
                   {/* Mobile Auth Actions */}
                   {!isAuthenticated && (
-                    <div className="p-6 border-t border-slate-200 dark:border-slate-700 space-y-3">
-                      <Link to="/login?role=manager" onClick={handleNavClick}>
-                        <Button
-                          variant="outline"
-                          className="w-full rounded-xl border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 justify-start gap-3 h-12"
-                        >
-                          <Users className="h-5 w-5" />
-                          Manager Login
-                        </Button>
-                      </Link>
-                      <Link
-                        to="/login?role=commentator"
-                        onClick={handleNavClick}
-                      >
-                        <Button
-                          variant="outline"
-                          className="w-full rounded-xl border-green-500 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 justify-start gap-3 h-12"
-                        >
-                          <Target className="h-5 w-5" />
-                          Commentary Login
-                        </Button>
-                      </Link>
+                    <div className="p-6 border-t border-slate-200 dark:border-slate-700">
                       <Link to="/login?role=admin" onClick={handleNavClick}>
                         <Button
                           variant="default"
-                          className="w-full rounded-xl bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg justify-start gap-3 h-12 border-0"
+                          className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg justify-center gap-3 h-12 border-0"
                         >
-                          <User className="h-5 w-5" />
-                          Admin Login
+                          <LogIn className="h-5 w-5" />
+                          Login
                         </Button>
                       </Link>
                     </div>
