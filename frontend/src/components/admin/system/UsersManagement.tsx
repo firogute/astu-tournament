@@ -27,7 +27,17 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Search, Plus, Edit3, Trash2, Shield, Mail } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Edit3,
+  Trash2,
+  Shield,
+  Mail,
+  Eye,
+  EyeOff,
+  User,
+} from "lucide-react";
 import apiClient from "@/lib/api";
 
 export const UsersManagement = () => {
@@ -62,12 +72,31 @@ export const UsersManagement = () => {
       const response = await apiClient.get("/teams");
       setTeams(response.data.data || []);
     } catch (error) {
-      // Handle error
+      toast({
+        title: "Error",
+        description: "Failed to load teams",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUser = async (user: any) => {
+    try {
+      await apiClient.delete(`/admin/users/${user.id}`);
+      toast({ title: "Success", description: "User deleted successfully" });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+      });
     }
   };
 
   const filteredUsers = users.filter(
     (user) =>
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.team?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -75,24 +104,24 @@ export const UsersManagement = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center bg-card p-4 rounded-lg border">
+        <div className="relative flex-1 w-full sm:max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
-            placeholder="Search users..."
-            className="pl-10"
+            placeholder="Search users by name, email, or role..."
+            className="pl-10 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto mt-3 sm:mt-0">
               <Plus className="w-4 h-4" />
               Add User
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Add New User</DialogTitle>
             </DialogHeader>
@@ -110,6 +139,7 @@ export const UsersManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Team</TableHead>
                 <TableHead>Status</TableHead>
@@ -133,6 +163,12 @@ export const UsersManagement = () => {
                             : "Never"}
                         </p>
                       </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span>{user.name || "No name"}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -163,7 +199,7 @@ export const UsersManagement = () => {
                             <Edit3 className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-w-md">
                           <DialogHeader>
                             <DialogTitle>Edit User</DialogTitle>
                           </DialogHeader>
@@ -195,35 +231,98 @@ export const UsersManagement = () => {
 
 const UserForm = ({ user, teams, onSuccess }: any) => {
   const [formData, setFormData] = useState({
+    name: user?.name || "",
     email: user?.email || "",
+    password: "",
     role: user?.role || "commentator",
-    team_id: user?.team_id || "",
+    team_id: user?.team_id || "no-team",
     is_active: user?.is_active ?? true,
   });
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation
+    if (!formData.name) {
+      toast({
+        title: "Error",
+        description: "Name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user && !formData.password) {
+      toast({
+        title: "Error",
+        description: "Password is required for new users",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password && formData.password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      // Prepare data for API
+      const submitData = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        team_id: formData.team_id === "no-team" ? null : formData.team_id,
+        is_active: formData.is_active,
+      };
+
+      // Only include password if it's provided (for new users or password changes)
+      if (formData.password) {
+        submitData.password = formData.password;
+      }
+
       if (user) {
-        await apiClient.put(`/admin/users/${user.id}`, formData);
+        // Update existing user
+        await apiClient.put(`/admin/users/${user.id}`, submitData);
         toast({ title: "Success", description: "User updated successfully" });
       } else {
-        await apiClient.post("/admin/users", formData);
+        // Create new user
+        await apiClient.post("/auth/register", submitData);
         toast({ title: "Success", description: "User created successfully" });
       }
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to save user",
+        description: error.response?.data?.error || "Failed to save user",
         variant: "destructive",
       });
     }
   };
 
+  // Show team selection only for manager role
+  const showTeamSelection = formData.role === "manager";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="name">Full Name</Label>
+        <Input
+          id="name"
+          type="text"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+          placeholder="Enter full name"
+        />
+      </div>
+
       <div>
         <Label htmlFor="email">Email</Label>
         <Input
@@ -234,6 +333,70 @@ const UserForm = ({ user, teams, onSuccess }: any) => {
           required
         />
       </div>
+
+      {/* Password field - only required for new users, optional for updates */}
+      {!user && (
+        <div>
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              required={!user}
+              placeholder="Enter password (min 6 characters)"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Password update field for existing users */}
+      {user && (
+        <div>
+          <Label htmlFor="password">New Password (optional)</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              placeholder="Leave blank to keep current password"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div>
         <Label htmlFor="role">Role</Label>
         <Select
@@ -250,27 +413,63 @@ const UserForm = ({ user, teams, onSuccess }: any) => {
           </SelectContent>
         </Select>
       </div>
-      <div>
-        <Label htmlFor="team">Team</Label>
-        <Select
-          value={formData.team_id}
-          onValueChange={(value) =>
-            setFormData({ ...formData, team_id: value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select team" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">System</SelectItem>
-            {teams.map((team) => (
-              <SelectItem key={team.id} value={team.id}>
-                {team.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+
+      {/* Team selection - only shown for manager role */}
+      {showTeamSelection && (
+        <div>
+          <Label htmlFor="team">Team Assignment</Label>
+          <Select
+            value={formData.team_id}
+            onValueChange={(value) =>
+              setFormData({ ...formData, team_id: value })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select team" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="no-team">No Team (System Admin)</SelectItem>
+              {teams.map((team) => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.name} ({team.short_name})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Managers must be assigned to a team
+          </p>
+        </div>
+      )}
+
+      {/* Status field for existing users */}
+      {user && (
+        <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div>
+            <Label htmlFor="is_active" className="text-base">
+              Account Status
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              {formData.is_active ? "Active" : "Deactivated"}
+            </p>
+          </div>
+          <Select
+            value={formData.is_active ? "active" : "inactive"}
+            onValueChange={(value) =>
+              setFormData({ ...formData, is_active: value === "active" })
+            }
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <Button type="submit" className="w-full">
         {user ? "Update User" : "Create User"}
       </Button>
