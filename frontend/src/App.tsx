@@ -45,7 +45,7 @@ const App = () => (
                 <Route path="/match/:id" element={<MatchDetails />} />
                 <Route path="/player/:id" element={<PlayerProfile />} />
                 <Route
-                  path="/manager"
+                  path="/manager/*"
                   element={
                     <ProtectedRoute allowedRoles={["manager"]}>
                       <Manager />
@@ -53,7 +53,7 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/admin"
+                  path="/admin/*"
                   element={
                     <ProtectedRoute allowedRoles={["admin"]}>
                       <Admin />

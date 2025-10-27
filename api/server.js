@@ -12,6 +12,7 @@ import playerMatchStatsRoutes from "./routes/playerMatchStats.js";
 import matchEventsRoutes from "./routes/matchEvents.js";
 import commentaryRoutes from "./routes/commentary.js";
 import teamStandingsRoutes from "./routes/teamStandings.js";
+import adminRoutes from "./routes/admin.js";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use("/api/player-match-stats", playerMatchStatsRoutes);
 app.use("/api/match-events", matchEventsRoutes);
 app.use("/api/commentary", commentaryRoutes);
 app.use("/api/team/standings", teamStandingsRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Example route
 app.get("/", (req, res) => {
