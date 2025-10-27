@@ -74,7 +74,7 @@ export function CreatePlayerDialog({ onSuccess }: CreatePlayerDialogProps) {
         preferred_foot: formData.preferred_foot,
       });
 
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         toast({
           title: "Player Created",
           description: `${formData.name} has been added to the team!`,

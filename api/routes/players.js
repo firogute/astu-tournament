@@ -182,14 +182,28 @@ router.post(
 
       const { data, error } = await supabase
         .from("players")
-        .insert(playerData, { returning: "representation" });
+        .insert(playerData)
+        .select()
+        .single(); // ensures one object, not array
 
-      if (error) return res.status(400).json({ error: error.message });
+      if (error) {
+        console.error("Supabase insert error:", error);
+        return res.status(400).json({ success: false, error: error.message });
+      }
 
-      res.status(201).json({ message: "Player created", player: data[0] });
+      if (!data) {
+        return res.status(500).json({ success: false, error: "Insert failed" });
+      }
+
+      // Always return valid JSON and 201 status
+      return res.status(201).json({
+        success: true,
+        message: "Player created successfully",
+        player: data,
+      });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Server error" });
+      console.error("Unexpected server error:", err);
+      return res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
