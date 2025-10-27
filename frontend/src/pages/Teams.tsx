@@ -29,11 +29,8 @@ const Teams = () => {
     const fetchTeams = async () => {
       try {
         setLoading(true);
-        // Assuming you have a tournament ID - you might need to adjust this
-        // based on your actual API structure
         const tournamentId = "10fc1f14-88d1-4549-a703-5186dad81d70"; // Example tournament ID
         const response = await apiClient.get(`/team/standings/${tournamentId}`);
-        console.log(response.data);
         setTeams(response.data);
       } catch (err) {
         console.error("Error fetching teams:", err);

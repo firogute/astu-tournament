@@ -1,14 +1,6 @@
-// components/AdminTabs.tsx
+// components/AdminTabs.tsx (updated)
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Zap,
-  Trophy,
-  Users,
-  Calendar,
-  Settings,
-  Globe,
-  Shield,
-} from "lucide-react";
+import { Zap, Trophy, Users, Calendar, Settings } from "lucide-react";
 import OverviewTab from "./tabs/OverviewTab";
 import TournamentsTab from "./tabs/TournamentsTab";
 import TeamsTab from "./tabs/TeamsTab";
@@ -22,7 +14,6 @@ interface AdminTabsProps {
   onSystemSubTabChange: (tab: string) => void;
   masterData: any;
   selectedTournament: any;
-  searchTerm: string;
   onDataUpdate: () => void;
 }
 
@@ -33,7 +24,6 @@ const AdminTabs = ({
   onSystemSubTabChange,
   masterData,
   selectedTournament,
-  searchTerm,
   onDataUpdate,
 }: AdminTabsProps) => {
   return (
@@ -46,22 +36,22 @@ const AdminTabs = ({
         <TabTrigger value="system" icon={Settings} label="System" />
       </TabsList>
 
-      <TabsContent value="overview">
+      <TabsContent value="overview" className="space-y-4">
         <OverviewTab masterData={masterData} onDataUpdate={onDataUpdate} />
       </TabsContent>
 
-      <TabsContent value="tournaments">
+      <TabsContent value="tournaments" className="space-y-4">
         <TournamentsTab
           tournaments={masterData?.tournaments}
           onDataUpdate={onDataUpdate}
         />
       </TabsContent>
 
-      <TabsContent value="teams">
+      <TabsContent value="teams" className="space-y-4">
         <TeamsTab teams={masterData?.teams} onDataUpdate={onDataUpdate} />
       </TabsContent>
 
-      <TabsContent value="matches">
+      <TabsContent value="matches" className="space-y-4">
         <MatchesTab
           matches={masterData?.matches}
           selectedTournament={selectedTournament}
@@ -69,7 +59,7 @@ const AdminTabs = ({
         />
       </TabsContent>
 
-      <TabsContent value="system">
+      <TabsContent value="system" className="space-y-4">
         <SystemTab
           subTab={systemSubTab}
           onSubTabChange={onSystemSubTabChange}

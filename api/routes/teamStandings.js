@@ -8,7 +8,6 @@ const router = Router();
 router.get("/:tournamentId", async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    console.log("Fetching standings for tournament:", tournamentId);
 
     // 1. Fetch all tournament teams with team info
     const { data: tournamentTeams, error: teamsError } = await supabase
