@@ -4,8 +4,8 @@ import { authenticateJWT, authorizeRoles } from "../middleware/auth.js";
 
 const router = Router();
 
-// Get all tournaments
-router.get("/", authenticateJWT, async (req, res) => {
+// Get all tournaments - MAKE THIS PUBLIC
+router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("tournaments")
@@ -20,8 +20,8 @@ router.get("/", authenticateJWT, async (req, res) => {
   }
 });
 
-// Get tournament by ID
-router.get("/:id", authenticateJWT, async (req, res) => {
+// Get tournament by ID - MAKE THIS PUBLIC
+router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { data, error } = await supabase

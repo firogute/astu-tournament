@@ -182,4 +182,127 @@ router.post(
   }
 );
 
+// Update match (admin/manager only)
+router.put(
+  "/:id",
+  authenticateJWT,
+  authorizeRoles("admin", "manager"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      const { data, error } = await supabase
+        .from("matches")
+        .update(updateData)
+        .eq("id", id)
+        .select(
+          `
+        *,
+        home_team:home_team_id (*),
+        away_team:away_team_id (*),
+        venue:venue_id (*)
+      `
+        )
+        .single();
+
+      if (error) throw error;
+
+      // Transform the data
+      const transformedMatch = {
+        id: data.id,
+        tournament_id: data.tournament_id,
+        match_date: data.match_date,
+        match_time: data.match_time,
+        status: data.status,
+        minute: data.minute,
+        home_score: data.home_score,
+        away_score: data.away_score,
+        home_penalty_score: data.home_penalty_score,
+        away_penalty_score: data.away_penalty_score,
+        referee: data.referee,
+        attendance: data.attendance,
+        weather_conditions: data.weather_conditions,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        homeTeam: data.home_team
+          ? {
+              id: data.home_team.id,
+              name: data.home_team.name,
+              logo: data.home_team.logo,
+              color_primary: data.home_team.color_primary,
+              short_name: data.home_team.short_name,
+            }
+          : null,
+        awayTeam: data.away_team
+          ? {
+              id: data.away_team.id,
+              name: data.away_team.name,
+              logo: data.away_team.logo,
+              color_primary: data.away_team.color_primary,
+              short_name: data.away_team.short_name,
+            }
+          : null,
+        venue: data.venue ? data.venue.name : "Unknown Venue",
+      };
+
+      res.json({
+        success: true,
+        message: "Match updated successfully",
+        data: transformedMatch,
+      });
+    } catch (error) {
+      console.error("Update match error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Delete match (admin only)
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorizeRoles("admin"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // First, check if match exists
+      const { data: match, error: fetchError } = await supabase
+        .from("matches")
+        .select(
+          `
+        id,
+        home_team:home_team_id(name, short_name),
+        away_team:away_team_id(name, short_name),
+        match_date
+      `
+        )
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !match) {
+        return res.status(404).json({ error: "Match not found" });
+      }
+
+      // Delete the match
+      const { error } = await supabase.from("matches").delete().eq("id", id);
+
+      if (error) throw error;
+
+      const matchInfo = `${match.home_team.short_name} vs ${
+        match.away_team.short_name
+      } - ${new Date(match.match_date).toLocaleDateString()}`;
+
+      res.json({
+        success: true,
+        message: `Match "${matchInfo}" deleted successfully`,
+      });
+    } catch (error) {
+      console.error("Delete match error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 export default router;

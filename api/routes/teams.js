@@ -4,19 +4,18 @@ import { authenticateJWT, authorizeRoles } from "../middleware/auth.js";
 
 const router = Router();
 
-// Get all teams
+// GET routes:
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase.from("teams").select("*");
     if (error) return res.status(400).json({ error: error.message });
-    res.json({ teams: data });
+    res.json({ success: true, data }); // Add success: true
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Get team by ID
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -27,7 +26,7 @@ router.get("/:id", async (req, res) => {
       .single();
     if (error || !data)
       return res.status(404).json({ error: "Team not found" });
-    res.json({ team: data });
+    res.json({ success: true, data }); // Add success: true
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -50,6 +49,105 @@ router.post(
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// Update team (admin/manager only)
+router.put(
+  "/:id",
+  authenticateJWT,
+  authorizeRoles("admin", "manager"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      const { data, error } = await supabase
+        .from("teams")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.json({
+        success: true,
+        message: "Team updated successfully",
+        data,
+      });
+    } catch (error) {
+      console.error("Update team error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Delete team (admin only)
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorizeRoles("admin"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // First, check if team exists
+      const { data: team, error: fetchError } = await supabase
+        .from("teams")
+        .select("name")
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // Check if team has players
+      const { data: players, error: playersError } = await supabase
+        .from("players")
+        .select("id")
+        .eq("team_id", id)
+        .limit(1);
+
+      if (playersError) throw playersError;
+
+      if (players && players.length > 0) {
+        return res.status(400).json({
+          error:
+            "Cannot delete team with players. Please transfer or delete players first.",
+        });
+      }
+
+      // Check if team has matches
+      const { data: matches, error: matchesError } = await supabase
+        .from("matches")
+        .select("id")
+        .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
+        .limit(1);
+
+      if (matchesError) throw matchesError;
+
+      if (matches && matches.length > 0) {
+        return res.status(400).json({
+          error:
+            "Cannot delete team with scheduled matches. Please update matches first.",
+        });
+      }
+
+      // Delete the team
+      const { error } = await supabase.from("teams").delete().eq("id", id);
+
+      if (error) throw error;
+
+      res.json({
+        success: true,
+        message: `Team "${team.name}" deleted successfully`,
+      });
+    } catch (error) {
+      console.error("Delete team error:", error);
+      res.status(500).json({ error: error.message });
     }
   }
 );
