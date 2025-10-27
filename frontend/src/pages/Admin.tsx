@@ -105,6 +105,7 @@ const AdminControlCenter = () => {
       setLoading(true);
       const response = await apiClient.get("/admin/master-data");
       if (response.data.success) {
+        // console.log(response.data.data);
         setMasterData(response.data.data);
         if (response.data.data.tournaments.length > 0) {
           setSelectedTournament(response.data.data.tournaments[0]);
@@ -331,17 +332,12 @@ const AdminControlCenter = () => {
     );
   }
 
-  const tournamentTeams =
-    masterData?.teams.filter((team) =>
-      masterData.tournament_teams?.some(
-        (tt) =>
-          tt.team_id === team.id && tt.tournament_id === selectedTournament?.id
-      )
-    ) || [];
+  const tournamentTeams = masterData?.teams || [];
 
   const tournamentMatches =
     masterData?.matches.filter(
-      (match) => match.tournament_id === selectedTournament?.id
+      (match) =>
+        !selectedTournament || match.tournament_id === selectedTournament?.id
     ) || [];
 
   const filteredTeams = tournamentTeams.filter(
@@ -501,28 +497,40 @@ const AdminControlCenter = () => {
           className="space-y-4"
         >
           {/* In TabsList - add this as the 2nd tab */}
-          <TabsList className="grid w-full grid-cols-5 h-auto p-1">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm py-2">
+          <TabsList className="flex space-x-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-5 sm:gap-1">
+            <TabsTrigger
+              value="overview"
+              className="flex-shrink-0 text-xs sm:text-sm py-2"
+            >
               <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               <span className="hidden sm:inline">Overview</span>
               <span className="sm:hidden">Home</span>
             </TabsTrigger>
             <TabsTrigger
               value="tournaments"
-              className="text-xs sm:text-sm py-2"
+              className="flex-shrink-0 text-xs sm:text-sm py-2"
             >
               <Trophy className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               Tournaments
             </TabsTrigger>
-            <TabsTrigger value="teams" className="text-xs sm:text-sm py-2">
+            <TabsTrigger
+              value="teams"
+              className="flex-shrink-0 text-xs sm:text-sm py-2"
+            >
               <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               Teams
             </TabsTrigger>
-            <TabsTrigger value="matches" className="text-xs sm:text-sm py-2">
+            <TabsTrigger
+              value="matches"
+              className="flex-shrink-0 text-xs sm:text-sm py-2"
+            >
               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               Matches
             </TabsTrigger>
-            <TabsTrigger value="system" className="text-xs sm:text-sm py-2">
+            <TabsTrigger
+              value="system"
+              className="flex-shrink-0 text-xs sm:text-sm py-2"
+            >
               <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               <span className="hidden sm:inline">System</span>
               <span className="sm:hidden">Sys</span>

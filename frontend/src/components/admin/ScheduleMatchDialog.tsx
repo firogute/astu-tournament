@@ -50,7 +50,9 @@ export function ScheduleMatchDialog({ onSuccess }: ScheduleMatchDialogProps) {
       const [tournamentsRes, teamsRes, venuesRes] = await Promise.all([
         apiClient.get("/tournaments"),
         apiClient.get("/teams"),
-        apiClient.get("/venues"),
+        apiClient
+          .get("/venues")
+          .catch(() => ({ data: { success: true, data: [] } })), // Handle 404
       ]);
 
       if (tournamentsRes.data.success) setTournaments(tournamentsRes.data.data);
@@ -58,6 +60,9 @@ export function ScheduleMatchDialog({ onSuccess }: ScheduleMatchDialogProps) {
       if (venuesRes.data.success) setVenues(venuesRes.data.data);
     } catch (error) {
       console.error("Failed to fetch data");
+      setTournaments([]);
+      setTeams([]);
+      setVenues([]);
     }
   };
 
