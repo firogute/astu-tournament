@@ -75,6 +75,7 @@ import { CreateTournamentDialog } from "@/components/admin/CreateTournamentDialo
 import { CreateTeamDialog } from "@/components/admin/CreateTeamDialog";
 import { CreatePlayerDialog } from "@/components/admin/CreatePlayerDialog";
 import { ScheduleMatchDialog } from "@/components/admin/ScheduleMatchDialog";
+import { EditTournamentDialog } from "@/components/admin/EditTournamentDialog";
 
 interface MasterData {
   tournaments: any[];
@@ -200,7 +201,14 @@ const AdminControlCenter = () => {
     </Button>
   );
 
-  const DataTable = ({ data, columns, onEdit, onDelete, title }: any) => {
+  const DataTable = ({
+    data,
+    columns,
+    onEdit,
+    onDelete,
+    title,
+    renderActions,
+  }: any) => {
     if (!data || data.length === 0) {
       return (
         <Card>
@@ -228,23 +236,28 @@ const AdminControlCenter = () => {
                     </div>
                   ))}
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEdit(item)}>
-                      <Edit3 className="w-4 h-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onDelete(item)}>
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex gap-1">
+                  {renderActions ? (
+                    renderActions(item)
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEdit(item)}
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDelete(item)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             </Card>
           ))}
@@ -269,23 +282,28 @@ const AdminControlCenter = () => {
                   </TableCell>
                 ))}
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEdit(item)}>
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onDelete(item)}>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex gap-1">
+                    {renderActions ? (
+                      renderActions(item)
+                    ) : (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEdit(item)}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDelete(item)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -482,11 +500,19 @@ const AdminControlCenter = () => {
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+          {/* In TabsList - add this as the 2nd tab */}
+          <TabsList className="grid w-full grid-cols-5 h-auto p-1">
             <TabsTrigger value="overview" className="text-xs sm:text-sm py-2">
               <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               <span className="hidden sm:inline">Overview</span>
               <span className="sm:hidden">Home</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="tournaments"
+              className="text-xs sm:text-sm py-2"
+            >
+              <Trophy className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              Tournaments
             </TabsTrigger>
             <TabsTrigger value="teams" className="text-xs sm:text-sm py-2">
               <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
@@ -502,6 +528,72 @@ const AdminControlCenter = () => {
               <span className="sm:hidden">Sys</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Add this new Tournaments Tab Content */}
+          <TabsContent value="tournaments" className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <CreateTournamentDialog onSuccess={fetchMasterData} />
+              <Button
+                variant="outline"
+                onClick={() => handleBulkAction("tournaments-export")}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export Tournaments
+              </Button>
+            </div>
+
+            <DataTable
+              data={masterData?.tournaments}
+              columns={[
+                { key: "name", label: "Name" },
+                { key: "season", label: "Season" },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (item: any) => (
+                    <Badge
+                      variant={
+                        item.status === "active"
+                          ? "default"
+                          : item.status === "completed"
+                          ? "secondary"
+                          : item.status === "cancelled"
+                          ? "destructive"
+                          : "outline"
+                      }
+                    >
+                      {item.status}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: "dates",
+                  label: "Dates",
+                  render: (item: any) =>
+                    `${new Date(
+                      item.start_date
+                    ).toLocaleDateString()} - ${new Date(
+                      item.end_date
+                    ).toLocaleDateString()}`,
+                },
+              ]}
+              title="tournaments"
+              renderActions={(item: any) => (
+                <EditTournamentDialog
+                  tournament={item}
+                  onSuccess={fetchMasterData}
+                  onDelete={() => {
+                    fetchMasterData();
+                    toast({
+                      title: "Tournament Deleted",
+                      description: `${item.name} has been removed successfully`,
+                    });
+                  }}
+                />
+              )}
+            />
+          </TabsContent>
 
           {/* OVERVIEW TAB */}
           <TabsContent value="overview" className="space-y-4">
@@ -539,11 +631,42 @@ const AdminControlCenter = () => {
                   columns={[
                     { key: "name", label: "Name" },
                     { key: "season", label: "Season" },
-                    { key: "status", label: "Status" },
+                    {
+                      key: "status",
+                      label: "Status",
+                      render: (item: any) => (
+                        <Badge
+                          variant={
+                            item.status === "active"
+                              ? "default"
+                              : item.status === "completed"
+                              ? "secondary"
+                              : item.status === "cancelled"
+                              ? "destructive"
+                              : "outline"
+                          }
+                        >
+                          {item.status}
+                        </Badge>
+                      ),
+                    },
                   ]}
                   onEdit={(item: any) => handleEditItem("Tournament", item)}
                   onDelete={(item: any) => handleDeleteItem("Tournament", item)}
                   title="tournaments"
+                  renderActions={(item: any) => (
+                    <EditTournamentDialog
+                      tournament={item}
+                      onSuccess={fetchMasterData}
+                      onDelete={() => {
+                        fetchMasterData();
+                        toast({
+                          title: "Tournament Deleted",
+                          description: `${item.name} has been removed successfully`,
+                        });
+                      }}
+                    />
+                  )}
                 />
               </CardContent>
             </Card>
