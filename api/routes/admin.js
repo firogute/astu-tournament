@@ -465,4 +465,107 @@ router.post("/bulk/update-players", async (req, res) => {
   }
 });
 
+// Add these routes to your existing admin routes
+
+// Create tournament
+router.post("/tournaments/create", async (req, res) => {
+  try {
+    const { name, season, start_date, end_date, rules, points_system } =
+      req.body;
+
+    const { data, error } = await supabase
+      .from("tournaments")
+      .insert([
+        {
+          name,
+          season,
+          start_date,
+          end_date,
+          rules,
+          points_system,
+          status: "upcoming",
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create team with tournament assignment
+router.post("/teams/create", async (req, res) => {
+  try {
+    const { team, tournament_id } = req.body;
+
+    // Create team
+    const { data: teamData, error: teamError } = await supabase
+      .from("teams")
+      .insert([team])
+      .select()
+      .single();
+
+    if (teamError) throw teamError;
+
+    // Add to tournament
+    if (tournament_id) {
+      const { error: tournamentError } = await supabase
+        .from("tournament_teams")
+        .insert([{ tournament_id, team_id: teamData.id }]);
+
+      if (tournamentError) throw tournamentError;
+    }
+
+    res.json({ success: true, data: teamData });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Schedule match
+router.post("/matches/schedule", async (req, res) => {
+  try {
+    const {
+      tournament_id,
+      home_team_id,
+      away_team_id,
+      venue_id,
+      match_date,
+      match_time,
+    } = req.body;
+
+    const { data, error } = await supabase
+      .from("matches")
+      .insert([
+        {
+          tournament_id,
+          home_team_id,
+          away_team_id,
+          venue_id,
+          match_date,
+          match_time,
+          status: "scheduled",
+        },
+      ])
+      .select(
+        `
+        *,
+        home_team:home_team_id(*),
+        away_team:away_team_id(*),
+        tournament:tournaments(*),
+        venue:venues(*)
+      `
+      )
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
