@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, TrendingUp, Trophy, Calendar, Star } from "lucide-react";
 import heroImage from "@/assets/hero-stadium.jpg";
 import apiClient from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 // Loading Placeholder Components
 const LoadingMatchCard = () => (
@@ -79,6 +80,7 @@ const Index = () => {
   const [standings, setStandings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -263,6 +265,7 @@ const Index = () => {
             <Button
               size="lg"
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full px-8 py-3 shadow-2xl"
+              onClick={() => navigate("/matches")}
             >
               View Full Schedule
               <ArrowRight className="ml-2 h-5 w-5" />

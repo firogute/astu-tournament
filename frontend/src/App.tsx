@@ -21,6 +21,7 @@ import Admin from "./pages/Admin";
 import Commentary from "./pages/Commentary";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./pages/Footer";
+import MatchesPage from "./pages/MatchesPage";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,8 @@ const App = () => (
                 <Route path="/top-assists" element={<TopAssistsPage />} />
                 <Route path="/match/:id" element={<MatchDetails />} />
                 <Route path="/player/:id" element={<PlayerProfile />} />
+                <Route path="/matches" element={<MatchesPage />} />
+
                 <Route
                   path="/manager/*"
                   element={

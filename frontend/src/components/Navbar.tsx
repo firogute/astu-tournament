@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import logo from "@/assets/logo.png";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { DialogTitle } from "@radix-ui/react-dialog";
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
@@ -167,8 +169,16 @@ export function Navbar() {
               </SheetTrigger>
               <SheetContent
                 side="right"
+                aria-describedby="mobile-menu-description"
                 className="w-[85vw] max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-l border-slate-200 dark:border-slate-700"
               >
+                <p id="mobile-menu-description" className="sr-only">
+                  Menu for mobile navigation. Contains links and login options.
+                </p>
+                <DialogTitle className="sr-only">
+                  Mobile Navigation Menu
+                </DialogTitle>
+
                 <div className="flex flex-col h-full">
                   {/* Mobile Logo */}
                   <div className="flex items-center gap-3 p-6 border-b border-slate-200 dark:border-slate-700">
