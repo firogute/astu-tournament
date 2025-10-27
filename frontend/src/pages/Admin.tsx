@@ -81,6 +81,10 @@ import { EditTeamDialog } from "@/components/admin/EditTeamDialog";
 import { DeleteTeamDialog } from "@/components/admin/DeleteTeamDialog";
 import { EditMatchDialog } from "@/components/admin/EditMatchDialog";
 import { DeleteMatchDialog } from "@/components/admin/DeleteMatchDialog";
+import { UsersManagement } from "@/components/admin/system/UsersManagement";
+import { VenuesManagement } from "@/components/admin/system/VenuesManagement";
+import { UserManagementAdvanced } from "@/components/admin/system/UserManagementAdvanced";
+import { SystemSettings } from "@/components/admin/system/SystemSettings";
 
 interface MasterData {
   tournaments: any[];
@@ -104,6 +108,7 @@ const AdminControlCenter = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const searchRef = useRef<HTMLDivElement>(null);
+  const [systemSubTab, setSystemSubTab] = useState("users");
 
   useEffect(() => {
     fetchMasterData();
@@ -478,7 +483,7 @@ const AdminControlCenter = () => {
       <div className="border rounded-lg overflow-hidden">
         {/* Mobile View */}
         <div className="sm:hidden space-y-2 p-4">
-          {data.slice(0, 5).map((item: any) => (
+          {data.map((item: any) => (
             <Card key={item.id} className="p-4">
               <div className="flex justify-between items-start">
                 <div className="space-y-1 flex-1">
@@ -529,7 +534,7 @@ const AdminControlCenter = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.slice(0, 10).map((item: any) => (
+            {data.map((item: any) => (
               <TableRow key={item.id}>
                 {columns.map((column: any) => (
                   <TableCell key={column.key}>
@@ -918,18 +923,6 @@ const AdminControlCenter = () => {
               <CreateTeamDialog onSuccess={fetchMasterData} />
               <CreatePlayerDialog onSuccess={fetchMasterData} />
               <ScheduleMatchDialog onSuccess={fetchMasterData} />
-              <ActionButton
-                icon={Upload}
-                label="Bulk Import"
-                onClick={() => handleBulkAction("import")}
-                variant="outline"
-              />
-              <ActionButton
-                icon={Download}
-                label="Export Data"
-                onClick={() => handleBulkAction("export")}
-                variant="outline"
-              />
             </div>
 
             {/* RECENT ACTIVITY */}
@@ -988,14 +981,6 @@ const AdminControlCenter = () => {
           <TabsContent value="teams" className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-3">
               <CreateTeamDialog onSuccess={fetchMasterData} />
-              <Button
-                variant="outline"
-                onClick={() => handleBulkAction("teams-import")}
-                className="gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                Bulk Import
-              </Button>
             </div>
 
             <DataTable
@@ -1050,51 +1035,51 @@ const AdminControlCenter = () => {
 
           {/* SYSTEM TAB */}
           <TabsContent value="system" className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <ActionButton
-                icon={UserPlus}
-                label="Add User"
-                onClick={() => handleAddItem("User")}
-              />
-              <ActionButton
-                icon={Globe}
-                label="Manage Venues"
-                onClick={() => navigate("/admin/venues")}
-              />
-              <ActionButton
-                icon={Shield}
-                label="User Management"
-                onClick={() => navigate("/admin/users")}
-              />
-              <ActionButton
-                icon={Settings}
-                label="System Settings"
-                onClick={() => navigate("/admin/settings")}
-              />
-            </div>
+            {/* SYSTEM SUB-TABS */}
+            <Tabs
+              value={systemSubTab}
+              onValueChange={setSystemSubTab}
+              className="space-y-4"
+            >
+              <TabsList className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <TabsTrigger value="users" className="text-xs sm:text-sm">
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                  Users
+                </TabsTrigger>
+                <TabsTrigger value="venues" className="text-xs sm:text-sm">
+                  <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                  Venues
+                </TabsTrigger>
+                <TabsTrigger
+                  value="user-management"
+                  className="text-xs sm:text-sm"
+                >
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                  User Mgmt
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="text-xs sm:text-sm">
+                  <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                  Settings
+                </TabsTrigger>
+              </TabsList>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">System Users</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataTable
-                  data={filteredData.users}
-                  columns={[
-                    { key: "email", label: "Email" },
-                    { key: "role", label: "Role" },
-                    {
-                      key: "team",
-                      label: "Team",
-                      render: (item: any) => item.team?.name || "System",
-                    },
-                  ]}
-                  onEdit={(item: any) => handleEditItem("User", item)}
-                  onDelete={(item: any) => handleDeleteItem("User", item)}
-                  title="users"
-                />
-              </CardContent>
-            </Card>
+              {/* SUB-TAB CONTENTS */}
+              <TabsContent value="users" className="space-y-4">
+                <UsersManagement />
+              </TabsContent>
+
+              <TabsContent value="venues" className="space-y-4">
+                <VenuesManagement />
+              </TabsContent>
+
+              <TabsContent value="user-management" className="space-y-4">
+                <UserManagementAdvanced />
+              </TabsContent>
+
+              <TabsContent value="settings" className="space-y-4">
+                <SystemSettings />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </div>
