@@ -107,7 +107,10 @@ export function CreatePlayerDialog({ onSuccess }: CreatePlayerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2" variant="outline">
+        <Button
+          className="gap-2 w-full sm:w-auto  bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          variant="outline"
+        >
           <Plus className="w-4 h-4" />
           Add Player
         </Button>

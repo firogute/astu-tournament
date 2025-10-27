@@ -71,6 +71,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import apiClient from "@/lib/api";
+import { CreateTournamentDialog } from "@/components/admin/CreateTournamentDialog";
+import { CreateTeamDialog } from "@/components/admin/CreateTeamDialog";
+import { CreatePlayerDialog } from "@/components/admin/CreatePlayerDialog";
+import { ScheduleMatchDialog } from "@/components/admin/ScheduleMatchDialog";
 
 interface MasterData {
   tournaments: any[];
@@ -370,15 +374,7 @@ const AdminControlCenter = () => {
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
-            <Button
-              size="sm"
-              className="flex-1 sm:flex-none gap-2 bg-gradient-to-r from-blue-600 to-purple-600"
-              onClick={() => handleAddItem("Tournament")}
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Tournament</span>
-              <span className="sm:hidden">New</span>
-            </Button>
+            <CreateTournamentDialog onSuccess={fetchMasterData} />
           </div>
         </div>
 
@@ -510,26 +506,14 @@ const AdminControlCenter = () => {
           {/* OVERVIEW TAB */}
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              <ActionButton
-                icon={Plus}
-                label="Create Tournament"
-                onClick={() => handleAddItem("Tournament")}
-              />
-              <ActionButton
-                icon={Users}
-                label="Add Team"
-                onClick={() => handleAddItem("Team")}
-              />
-              <ActionButton
-                icon={UserPlus}
-                label="Add Player"
-                onClick={() => handleAddItem("Player")}
-              />
-              <ActionButton
-                icon={Calendar}
-                label="Schedule Match"
-                onClick={() => handleAddItem("Match")}
-              />
+              <CreateTournamentDialog onSuccess={fetchMasterData} />
+
+              <CreateTeamDialog onSuccess={fetchMasterData} />
+
+              <CreatePlayerDialog onSuccess={fetchMasterData} />
+
+              <ScheduleMatchDialog onSuccess={fetchMasterData} />
+
               <ActionButton
                 icon={Upload}
                 label="Bulk Import"
