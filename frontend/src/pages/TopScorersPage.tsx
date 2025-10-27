@@ -23,11 +23,25 @@ const TopScorersPage = () => {
     const fetchTopScorers = async () => {
       try {
         setLoading(true);
+        setError(null);
+
         const response = await apiClient.get("/players/top-scorers?limit=20");
-        setPlayers(response.data.topScorers);
-      } catch (err) {
+
+        // Add proper validation for the response structure
+        if (response.data && Array.isArray(response.data.topScorers)) {
+          setPlayers(response.data.topScorers);
+        } else if (Array.isArray(response.data)) {
+          // Fallback: if the data is directly an array
+          setPlayers(response.data);
+        } else {
+          console.error("Unexpected API response:", response.data);
+          setError("Invalid data format received from server");
+        }
+      } catch (err: any) {
         console.error("Error fetching top scorers:", err);
-        setError("Failed to load top scorers data");
+        setError(
+          err.response?.data?.error || "Failed to load top scorers data"
+        );
       } finally {
         setLoading(false);
       }
@@ -61,6 +75,9 @@ const TopScorersPage = () => {
     }
   };
 
+  // Add a safe check before accessing players[0]
+  const topPlayer = players.length > 0 ? players[0] : null;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950 py-4 sm:py-6 lg:py-8">
@@ -72,14 +89,12 @@ const TopScorersPage = () => {
             </div>
           </div>
 
-          {/* Loading leader card */}
           <div className="relative mb-6 sm:mb-8 lg:mb-12">
             <Card className="p-6 bg-white/80 dark:bg-slate-900/80 rounded-2xl animate-pulse">
               <div className="h-32 bg-gray-300 rounded"></div>
             </Card>
           </div>
 
-          {/* Loading player cards */}
           <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {[...Array(6)].map((_, index) => (
               <Card
@@ -131,7 +146,7 @@ const TopScorersPage = () => {
           </p>
         </div>
 
-        {players[0] && (
+        {topPlayer && (
           <div className="relative mb-6 sm:mb-8 lg:mb-12 group">
             <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl sm:rounded-3xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
             <Card className="relative p-4 sm:p-6 lg:p-8 bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-2xl border-0 rounded-2xl sm:rounded-3xl transform group-hover:scale-[1.01] sm:group-hover:scale-[1.02] transition-all duration-300">
@@ -148,16 +163,16 @@ const TopScorersPage = () => {
                       🏆 Golden Boot Leader
                     </div>
                     <div className="text-xl sm:text-2xl lg:text-3xl xl:text-5xl font-bold mb-1 sm:mb-2 drop-shadow-md">
-                      {players[0].name}
+                      {topPlayer.name}
                     </div>
                     <div className="text-sm sm:text-lg lg:text-xl opacity-90 font-medium">
-                      {players[0].team || `Team ${players[0].team_id}`}
+                      {topPlayer.team || `Team ${topPlayer.team_id}`}
                     </div>
                   </div>
                 </div>
                 <div className="text-center mt-4 lg:mt-0">
                   <div className="text-4xl sm:text-5xl lg:text-6xl xl:text-8xl font-black drop-shadow-md">
-                    {players[0].goals}
+                    {topPlayer.goals}
                   </div>
                   <div className="text-sm sm:text-lg lg:text-xl font-semibold opacity-90">
                     Goals Scored
@@ -168,60 +183,68 @@ const TopScorersPage = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          {players.map((player, index) => {
-            const RankBadge = getRankBadge(index).icon;
-            const rankStyle = getRankBadge(index);
+        {players.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-muted-foreground text-lg">
+              No top scorers data available
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+            {players.map((player, index) => {
+              const RankBadge = getRankBadge(index).icon;
+              const rankStyle = getRankBadge(index);
 
-            return (
-              <div key={player.player_id} className="group">
-                <Card className="relative p-3 sm:p-4 lg:p-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl sm:hover:shadow-2xl transform hover:scale-[1.01] sm:hover:scale-[1.02] transition-all duration-300 overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-500" />
+              return (
+                <div key={player.player_id} className="group">
+                  <Card className="relative p-3 sm:p-4 lg:p-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl sm:hover:shadow-2xl transform hover:scale-[1.01] sm:hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-500" />
 
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div
-                      className={`relative flex-shrink-0 ${rankStyle.bg} w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg`}
-                    >
-                      <RankBadge
-                        className={`h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 ${rankStyle.text}`}
-                      />
-                      <div className="absolute -top-1 -right-1 bg-white text-slate-900 rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[10px] sm:text-xs font-bold shadow-md">
-                        {index + 1}
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div
+                        className={`relative flex-shrink-0 ${rankStyle.bg} w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg`}
+                      >
+                        <RankBadge
+                          className={`h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 ${rankStyle.text}`}
+                        />
+                        <div className="absolute -top-1 -right-1 bg-white text-slate-900 rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[10px] sm:text-xs font-bold shadow-md">
+                          {index + 1}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base sm:text-lg lg:text-xl font-bold text-slate-900 dark:text-white truncate">
+                              {player.name}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">
+                              {player.team || `Team ${player.team_id}`}
+                            </p>
+                          </div>
+                          <div className="text-right ml-2 sm:ml-3 lg:ml-4">
+                            <div className="text-2xl sm:text-3xl lg:text-3xl font-black bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                              {player.goals}
+                            </div>
+                            <div className="text-[10px] sm:text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                              Goals
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-base sm:text-lg lg:text-xl font-bold text-slate-900 dark:text-white truncate">
-                            {player.name}
-                          </h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">
-                            {player.team || `Team ${player.team_id}`}
-                          </p>
-                        </div>
-                        <div className="text-right ml-2 sm:ml-3 lg:ml-4">
-                          <div className="text-2xl sm:text-3xl lg:text-3xl font-black bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-                            {player.goals}
-                          </div>
-                          <div className="text-[10px] sm:text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                            Goals
-                          </div>
-                        </div>
+                    {index < 3 && (
+                      <div className="absolute top-2 sm:top-3 lg:top-4 right-2 sm:right-3 lg:right-4">
+                        <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse" />
                       </div>
-                    </div>
-                  </div>
-
-                  {index < 3 && (
-                    <div className="absolute top-2 sm:top-3 lg:top-4 right-2 sm:right-3 lg:right-4">
-                      <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse" />
-                    </div>
-                  )}
-                </Card>
-              </div>
-            );
-          })}
-        </div>
+                    )}
+                  </Card>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="text-center mt-8 sm:mt-12 lg:mt-16">
           <div className="inline-flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground bg-white/50 dark:bg-slate-900/50 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-slate-200 dark:border-slate-700">

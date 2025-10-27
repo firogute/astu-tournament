@@ -19,7 +19,7 @@ router.get("/", async (req, res) => {
 
 router.get("/top-scorers", async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 20;
 
     const { data, error } = await supabase.from("player_match_stats").select(`
         player_id,
@@ -27,18 +27,19 @@ router.get("/top-scorers", async (req, res) => {
         assists,
         players (
           name,
-          jersey_number,
-          position,
-          teams (name, short_name)
+          team_id,
+          teams (name)
         )
       `);
 
-    if (error) return res.status(400).json({ error: error.message });
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(400).json({ error: error.message });
+    }
 
     if (!data || data.length === 0) {
       return res.json({
-        success: true,
-        data: [],
+        topScorers: [],
         count: 0,
       });
     }
@@ -52,10 +53,8 @@ router.get("/top-scorers", async (req, res) => {
         playerStats[playerId] = {
           player_id: playerId,
           name: stat.players?.name || "Unknown Player",
-          jersey_number: stat.players?.jersey_number || 0,
-          position: stat.players?.position || "Unknown",
-          team_name: stat.players?.teams?.name || "Unknown Team",
-          team_short_name: stat.players?.teams?.short_name || "UNK",
+          team_id: stat.players?.team_id || "",
+          team: stat.players?.teams?.name || "Unknown Team",
           goals: 0,
           assists: 0,
         };
@@ -73,13 +72,14 @@ router.get("/top-scorers", async (req, res) => {
       })
       .slice(0, limit);
 
+    console.log(`Returning ${topScorers.length} top scorers`);
+
     res.json({
-      success: true,
-      data: topScorers,
+      topScorers: topScorers,
       count: topScorers.length,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Server error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
