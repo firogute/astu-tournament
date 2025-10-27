@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -23,8 +23,20 @@ const Login = () => {
   const { login } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const role = roleParam || "admin";
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      const redirectPaths = {
+        admin: "/admin/dashboard",
+        manager: "/manager/dashboard",
+        commentator: "/commentary/dashboard",
+      };
+      navigate(redirectPaths[user.role]);
+    }
+  }, [isAuthenticated, isLoading, user, navigate]);
 
   const getRoleConfig = (role: string) => {
     const configs = {
@@ -94,6 +106,14 @@ const Login = () => {
   const switchRole = (newRole: string) => {
     navigate(`/login?role=${newRole}`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
+        <div className="h-6 w-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div
