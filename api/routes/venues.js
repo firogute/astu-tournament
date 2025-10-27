@@ -4,7 +4,7 @@ import { authenticateJWT, authorizeRoles } from "../middleware/auth.js";
 
 const router = Router();
 
-// Get all venues
+// GET ALL VENUES
 router.get("/", authenticateJWT, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -13,14 +13,14 @@ router.get("/", authenticateJWT, async (req, res) => {
       .order("name");
 
     if (error) return res.status(400).json({ error: error.message });
-    res.json({ success: true, data });
+    res.json({ success: true, data: data || [] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Get venue by ID
+// GET VENUE BY ID
 router.get("/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
@@ -39,10 +39,15 @@ router.get("/:id", authenticateJWT, async (req, res) => {
   }
 });
 
-// Create venue (admin only)
+// CREATE VENUE (ADMIN ONLY)
 router.post("/", authenticateJWT, authorizeRoles("admin"), async (req, res) => {
   try {
     const { name, location, capacity, facilities } = req.body;
+
+    // Validate required fields
+    if (!name || !location) {
+      return res.status(400).json({ error: "Name and location are required" });
+    }
 
     const { data, error } = await supabase
       .from("venues")
@@ -50,7 +55,7 @@ router.post("/", authenticateJWT, authorizeRoles("admin"), async (req, res) => {
         {
           name,
           location,
-          capacity,
+          capacity: capacity || 0,
           facilities: facilities || { seats: "metal", lighting: true },
         },
       ])
@@ -58,6 +63,7 @@ router.post("/", authenticateJWT, authorizeRoles("admin"), async (req, res) => {
       .single();
 
     if (error) return res.status(400).json({ error: error.message });
+
     res.status(201).json({
       success: true,
       message: "Venue created successfully",
@@ -69,7 +75,7 @@ router.post("/", authenticateJWT, authorizeRoles("admin"), async (req, res) => {
   }
 });
 
-// Update venue (admin only)
+// UPDATE VENUE (ADMIN ONLY)
 router.put(
   "/:id",
   authenticateJWT,
@@ -78,6 +84,17 @@ router.put(
     try {
       const { id } = req.params;
       const { name, location, capacity, facilities } = req.body;
+
+      // Check if venue exists
+      const { data: existingVenue } = await supabase
+        .from("venues")
+        .select("id")
+        .eq("id", id)
+        .single();
+
+      if (!existingVenue) {
+        return res.status(404).json({ error: "Venue not found" });
+      }
 
       const { data, error } = await supabase
         .from("venues")
@@ -93,6 +110,7 @@ router.put(
         .single();
 
       if (error) throw error;
+
       res.json({
         success: true,
         message: "Venue updated successfully",
@@ -105,7 +123,7 @@ router.put(
   }
 );
 
-// Delete venue (admin only)
+// DELETE VENUE (ADMIN ONLY)
 router.delete(
   "/:id",
   authenticateJWT,
@@ -157,7 +175,7 @@ router.delete(
   }
 );
 
-// Get venue with matches
+// GET VENUE WITH MATCHES
 router.get("/:id/matches", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;

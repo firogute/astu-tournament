@@ -14,6 +14,8 @@ import commentaryRoutes from "./routes/commentary.js";
 import teamStandingsRoutes from "./routes/teamStandings.js";
 import adminRoutes from "./routes/admin.js";
 import venuesRoutes from "./routes/venues.js";
+import usersRoutes from "./routes/admin/users.js";
+import settingsRoutes from "./routes/admin/settings.js";
 
 dotenv.config();
 
@@ -38,7 +40,9 @@ app.use("/api/match-events", matchEventsRoutes);
 app.use("/api/commentary", commentaryRoutes);
 app.use("/api/team/standings", teamStandingsRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/venues", venuesRoutes);
+app.use("/admin/users", usersRoutes);
+app.use("/admin/venues", venuesRoutes);
+app.use("/admin/settings", settingsRoutes);
 
 // Example route
 app.get("/", (req, res) => {
