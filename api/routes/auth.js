@@ -332,72 +332,67 @@ router.get("/profile", authenticateJWT, async (req, res) => {
 });
 
 // Create a specific user manually (Admin only)
-router.post(
-  "/create-user",
-  authenticateJWT,
-  authorizeRoles("admin"),
-  async (req, res) => {
-    try {
-      const { name, email, password, role, team_id } = req.body;
+router.post("/create-user", async (req, res) => {
+  try {
+    const { name, email, password, role, team_id } = req.body;
 
-      if (!name || !email || !password || !role) {
-        return res.status(400).json({ error: "All fields are required" });
-      }
-
-      const allowedRoles = ["admin", "manager", "commentator"];
-      if (!allowedRoles.includes(role)) {
-        return res.status(400).json({ error: "Invalid role" });
-      }
-
-      const { data: existingUser, error: checkError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .single();
-
-      if (checkError && checkError.code !== "PGRST116") {
-        return res.status(400).json({ error: checkError.message });
-      }
-
-      if (existingUser) {
-        return res.status(400).json({ error: "User already exists" });
-      }
-
-      const hash = await bcrypt.hash(password, 10);
-
-      const { data, error: insertError } = await supabase
-        .from("users")
-        .insert({
-          name,
-          email,
-          password_hash: hash,
-          role,
-          team_id: team_id || null,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select();
-
-      if (insertError) {
-        return res.status(400).json({ error: insertError.message });
-      }
-
-      if (!data || data.length === 0) {
-        return res.status(500).json({ error: "User creation failed" });
-      }
-
-      return res.status(201).json({
-        success: true,
-        message: "User created successfully",
-        user: data[0],
-      });
-    } catch (err) {
-      console.error("Create user error:", err);
-      res.status(500).json({ error: "Server error: " + err.message });
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ error: "All fields are required" });
     }
+
+    const allowedRoles = ["admin", "manager", "commentator"];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    const { data: existingUser, error: checkError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (checkError && checkError.code !== "PGRST116") {
+      return res.status(400).json({ error: checkError.message });
+    }
+
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    const { data, error: insertError } = await supabase
+      .from("users")
+      .insert({
+        name,
+        email,
+        password_hash: hash,
+        role,
+        team_id: team_id || null,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select();
+
+    if (insertError) {
+      return res.status(400).json({ error: insertError.message });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(500).json({ error: "User creation failed" });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      user: data[0],
+    });
+  } catch (err) {
+    console.error("Create user error:", err);
+    res.status(500).json({ error: "Server error: " + err.message });
   }
-);
+});
 
 // Get all users (Admin only)
 router.get(

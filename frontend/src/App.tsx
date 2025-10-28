@@ -64,7 +64,7 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/commentary"
+                  path="/commentary/*"
                   element={
                     <ProtectedRoute allowedRoles={["commentator", "admin"]}>
                       <Commentary />

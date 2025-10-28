@@ -6,7 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { LogIn, Shield, Users, Mic } from "lucide-react";
+import {
+  LogIn,
+  Shield,
+  Users,
+  Mic,
+  Eye,
+  EyeOff,
+  Loader2,
+  ArrowLeft,
+  CheckCircle2,
+} from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -19,7 +29,9 @@ const Login = () => {
     | null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { login } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -89,56 +101,88 @@ const Login = () => {
     }
 
     setLoading(true);
+    setIsSuccess(false);
 
     try {
       await login(email, password, role);
-      toast.success(`Login successful! Welcome ${role}.`);
-      navigate(roleConfig.redirectPath);
+      setIsSuccess(true);
+      toast.success(
+        `Welcome ${role.charAt(0).toUpperCase() + role.slice(1)}!`,
+        {
+          description: "Login successful. Redirecting...",
+        }
+      );
+
+      // Small delay to show success state
+      setTimeout(() => {
+        navigate(roleConfig.redirectPath);
+      }, 1000);
     } catch (error: any) {
       const errorMessage =
-        error.response?.data?.error || "Login failed. Please try again.";
-      toast.error(errorMessage);
+        error.response?.data?.error ||
+        "Login failed. Please check your credentials.";
+      toast.error("Authentication Failed", {
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const switchRole = (newRole: string) => {
+    if (loading) return; // Prevent role switching during login
     navigate(`/login?role=${newRole}`);
+  };
+
+  const fillDemoCredentials = () => {
+    setEmail(roleConfig.demoEmail);
+    setPassword(roleConfig.demoPassword);
+    toast.info("Demo credentials filled", {
+      description: "Click Sign In to continue",
+    });
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
-        <div className="h-6 w-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 border-3 border-gray-400 border-t-blue-500 rounded-full animate-spin" />
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            Loading authentication...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${roleConfig.bgGradient} px-4 sm:px-6 transition-colors duration-300`}
+      className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${roleConfig.bgGradient} px-4 sm:px-6 transition-all duration-500 ease-in-out`}
     >
-      <Card className="w-full max-w-md p-6 sm:p-8 bg-white dark:bg-slate-800 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl rounded-2xl">
+      <Card className="w-full max-w-md p-6 sm:p-8 bg-white/95 dark:bg-slate-800/95 backdrop-blur-lg border border-slate-200/50 dark:border-slate-700/50 shadow-2xl rounded-2xl transform transition-all duration-300 hover:shadow-3xl">
         <div className="flex flex-col items-center mb-8 text-center">
-          <div className="relative mb-4">
+          <div className="relative mb-4 transform transition-transform duration-300 hover:scale-105">
             <img
               src={logo}
               alt="ASTU"
-              className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-md"
+              className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-lg border-2 border-white dark:border-slate-700"
             />
             <div
-              className={`absolute -top-1 -right-1 bg-gradient-to-r ${roleConfig.gradient} rounded-full w-6 h-6 flex items-center justify-center`}
+              className={`absolute -top-1 -right-1 bg-gradient-to-r ${roleConfig.gradient} rounded-full w-6 h-6 flex items-center justify-center shadow-lg border border-white dark:border-slate-800`}
             >
               <RoleIcon className="h-3.5 w-3.5 text-white" />
             </div>
           </div>
           <h1
-            className={`text-3xl sm:text-4xl font-extrabold bg-gradient-to-r ${roleConfig.gradient} bg-clip-text text-transparent`}
+            className={`text-3xl sm:text-4xl font-extrabold bg-gradient-to-r ${roleConfig.gradient} bg-clip-text text-transparent mb-2`}
           >
             {roleConfig.title}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm sm:text-base">
+          <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base leading-relaxed">
             {roleConfig.description}
           </p>
         </div>
@@ -152,16 +196,18 @@ const Login = () => {
           ].map((r) => {
             const Icon = r.icon;
             const isActive = role === r.key;
+            const config = getRoleConfig(r.key);
             return (
               <Button
                 key={r.key}
                 onClick={() => switchRole(r.key)}
                 size="sm"
-                className={`flex items-center justify-center gap-1 text-xs sm:text-sm font-medium rounded-lg py-2 transition-all ${
+                disabled={loading}
+                className={`flex items-center justify-center gap-1 text-xs sm:text-sm font-medium rounded-lg py-2 transition-all duration-200 ${
                   isActive
-                    ? `bg-gradient-to-r ${roleConfig.gradient} text-white shadow-sm`
-                    : "bg-white dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-500"
-                }`}
+                    ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg transform scale-105`
+                    : "bg-white dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-500 hover:scale-102"
+                } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {r.label}
@@ -172,12 +218,13 @@ const Login = () => {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label
               htmlFor="email"
-              className="text-sm font-semibold text-gray-700 dark:text-gray-300"
+              className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
             >
-              Email
+              <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
+              Email Address
             </Label>
             <Input
               id="email"
@@ -186,69 +233,110 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled={loading}
-              className="h-11 text-sm rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-gray-900 dark:text-white"
+              disabled={loading || isSuccess}
+              className="h-11 text-sm rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label
               htmlFor="password"
-              className="text-sm font-semibold text-gray-700 dark:text-gray-300"
+              className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
             >
+              <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
               Password
             </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-              className="h-11 text-sm rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-gray-900 dark:text-white"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading || isSuccess}
+                className="h-11 text-sm rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-gray-900 dark:text-white pr-10 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={togglePasswordVisibility}
+                disabled={loading || isSuccess}
+                className="absolute right-0 top-0 h-full px-3 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-transparent"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
 
           <Button
             type="submit"
-            disabled={loading}
-            className={`w-full h-11 bg-gradient-to-r ${roleConfig.gradient} text-white font-semibold text-sm sm:text-base rounded-lg shadow-md hover:opacity-90 transition`}
+            disabled={loading || isSuccess || !email || !password}
+            className={`w-full h-11 bg-gradient-to-r ${roleConfig.gradient} text-white font-semibold text-sm sm:text-base rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-102 disabled:transform-none disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {loading ? (
+              <div className="flex items-center gap-2 animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Signing in as {role}...
+              </div>
+            ) : isSuccess ? (
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Authenticating...
+                <CheckCircle2 className="h-4 w-4" />
+                Success! Redirecting...
               </div>
             ) : (
-              <>
-                <LogIn className="mr-2 h-5 w-5" />
+              <div className="flex items-center gap-2">
+                <LogIn className="h-4 w-4" />
                 Sign In as {role.charAt(0).toUpperCase() + role.slice(1)}
-              </>
+              </div>
             )}
           </Button>
         </form>
 
         {/* Demo Credentials */}
-        <div className="mt-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
-            Demo Credentials
-          </h3>
-          <p className="text-xs text-amber-700 dark:text-amber-300">
-            <strong>Email:</strong> {roleConfig.demoEmail}
-          </p>
-          <p className="text-xs text-amber-700 dark:text-amber-300">
-            <strong>Password:</strong> {roleConfig.demoPassword}
-          </p>
+        <div className="mt-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+              Demo Credentials
+            </h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fillDemoCredentials}
+              disabled={loading || isSuccess}
+              className="text-xs h-7 px-2 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-800/50"
+            >
+              Auto Fill
+            </Button>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-amber-700 dark:text-amber-300 font-mono bg-amber-100 dark:bg-amber-800/30 px-2 py-1 rounded">
+              <span className="font-semibold">Email:</span>{" "}
+              {roleConfig.demoEmail}
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 font-mono bg-amber-100 dark:bg-amber-800/30 px-2 py-1 rounded">
+              <span className="font-semibold">Password:</span>{" "}
+              {roleConfig.demoPassword}
+            </p>
+          </div>
         </div>
 
+        {/* Back to Public Site */}
         <div className="mt-6 text-center">
           <Button
-            variant="link"
-            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+            variant="ghost"
+            size="sm"
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 group transition-all duration-200"
             onClick={() => navigate("/")}
+            disabled={loading}
           >
-            ← Back to Public Site
+            <ArrowLeft className="h-3 w-3 mr-1 group-hover:-translate-x-0.5 transition-transform" />
+            Back to Public Site
           </Button>
         </div>
       </Card>
