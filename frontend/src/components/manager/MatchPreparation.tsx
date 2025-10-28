@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "../ui/skeleton";
 
 interface Match {
   id: string;
@@ -456,7 +457,7 @@ const MatchPreparation = () => {
 const MatchSelectorCard = ({ match, isSelected, onSelect, type }) => {
   const result = getMatchResult(match);
 
-  const getMatchResult = (match: Match) => {
+  function getMatchResult(match: Match) {
     if (!match.home_score && !match.away_score) return null;
 
     const isWin =
@@ -465,7 +466,7 @@ const MatchSelectorCard = ({ match, isSelected, onSelect, type }) => {
     const isDraw = match.home_score === match.away_score;
 
     return { isWin, isDraw, score: `${match.home_score}-${match.away_score}` };
-  };
+  }
 
   return (
     <Card

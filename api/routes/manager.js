@@ -5,7 +5,104 @@ import { authenticateJWT, authorizeRoles } from "../middleware/auth.js";
 
 const router = Router();
 
+// Get manager's players
+router.get(
+  "/my-players",
+  authenticateJWT,
+  authorizeRoles("manager"),
+  async (req, res) => {
+    try {
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("team_id")
+        .eq("id", req.user.id)
+        .single();
+
+      if (userError || !user.team_id) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      const { data: players, error } = await supabase
+        .from("players")
+        .select(
+          `
+          *,
+          player_match_stats(
+            goals,
+            assists,
+            minutes_played,
+            rating
+          )
+        `
+        )
+        .eq("team_id", user.team_id)
+        .eq("is_active", true)
+        .order("position", { ascending: true })
+        .order("jersey_number", { ascending: true });
+
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      // Transform players data to include calculated stats
+      const transformedPlayers = players.map((player) => {
+        const stats = player.player_match_stats || [];
+        const totalGoals = stats.reduce(
+          (sum, stat) => sum + (stat.goals || 0),
+          0
+        );
+        const totalAssists = stats.reduce(
+          (sum, stat) => sum + (stat.assists || 0),
+          0
+        );
+        const totalMinutes = stats.reduce(
+          (sum, stat) => sum + (stat.minutes_played || 0),
+          0
+        );
+        const avgRating =
+          stats.length > 0
+            ? stats.reduce((sum, stat) => sum + (stat.rating || 0), 0) /
+              stats.length
+            : 65; // Default rating for new players
+
+        // Calculate form (simplified - in real app this would be more complex)
+        const recentMatches = stats.slice(0, 5);
+        const recentForm =
+          recentMatches.length > 0
+            ? recentMatches.reduce((sum, stat) => sum + (stat.rating || 0), 0) /
+              recentMatches.length
+            : 3.0;
+        const form = Math.min(5.0, Math.max(1.0, recentForm / 20)); // Convert 0-100 rating to 1-5 form
+
+        return {
+          id: player.id,
+          name: player.name,
+          jersey_number: player.jersey_number,
+          position: player.position,
+          rating: Math.round(avgRating),
+          form: parseFloat(form.toFixed(1)),
+          goals: totalGoals,
+          assists: totalAssists,
+          is_active: player.is_active,
+          photo: player.photo,
+          nationality: player.nationality,
+          date_of_birth: player.date_of_birth,
+          preferred_foot: player.preferred_foot,
+          height_cm: player.height_cm,
+          total_minutes: totalMinutes,
+        };
+      });
+
+      res.json({ success: true, players: transformedPlayers });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
 // Get manager's team info
+// Get manager's team info (UPDATED)
 router.get(
   "/my-team",
   authenticateJWT,
@@ -22,15 +119,10 @@ router.get(
         return res.status(404).json({ error: "Team not found" });
       }
 
+      // Get team basic info
       const { data: team, error: teamError } = await supabase
         .from("teams")
-        .select(
-          `
-          *,
-          players:players(*, player_match_stats(*)),
-          coach:users(id, name, email)
-        `
-        )
+        .select("*")
         .eq("id", user.team_id)
         .single();
 
@@ -38,7 +130,21 @@ router.get(
         return res.status(400).json({ error: teamError.message });
       }
 
-      res.json({ success: true, team });
+      // Get coach info separately to avoid complex nested queries
+      const { data: coach } = await supabase
+        .from("users")
+        .select("id, name, email")
+        .eq("team_id", user.team_id)
+        .eq("role", "manager")
+        .single();
+
+      res.json({
+        success: true,
+        team: {
+          ...team,
+          coach: coach || null,
+        },
+      });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Server error" });
@@ -247,6 +353,45 @@ router.get(
 
       res.json({ success: true, formations: formations || [] });
     } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// Add new player
+router.post(
+  "/players",
+  authenticateJWT,
+  authorizeRoles("manager"),
+  async (req, res) => {
+    try {
+      const { data: user } = await supabase
+        .from("users")
+        .select("team_id")
+        .eq("id", req.user.id)
+        .single();
+
+      const { data: player, error } = await supabase
+        .from("players")
+        .insert({
+          ...req.body,
+          team_id: user.team_id,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      res.json({
+        success: true,
+        message: "Player added successfully",
+        player,
+      });
+    } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "Server error" });
     }
   }

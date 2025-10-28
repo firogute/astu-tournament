@@ -1,6 +1,5 @@
 // components/manager/TeamManagement.tsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import {
   Users,
   Plus,
   Search,
-  Filter,
+  Upload,
   Shirt,
   Star,
   TrendingUp,
@@ -18,8 +17,6 @@ import {
   Edit,
   Trash2,
   Eye,
-  Download,
-  Upload,
   Target,
   Zap,
   Shield,
@@ -77,11 +74,11 @@ const TeamManagement = () => {
   };
 
   const positions = [
-    { value: "all", label: "All Players", icon: Users },
-    { value: "GK", label: "Goalkeepers", icon: Shield },
-    { value: "DF", label: "Defenders", icon: Shield },
-    { value: "MF", label: "Midfielders", icon: Target },
-    { value: "FW", label: "Forwards", icon: Zap },
+    { value: "all", label: "All", icon: Users },
+    { value: "GK", label: "GK", icon: Shield },
+    { value: "DF", label: "DF", icon: Shield },
+    { value: "MF", label: "MF", icon: Target },
+    { value: "FW", label: "FW", icon: Zap },
   ];
 
   const filteredPlayers = players.filter((player) => {
@@ -123,7 +120,7 @@ const TeamManagement = () => {
     const totalPlayers = players.length;
     const averageRating =
       players.reduce((acc, p) => acc + p.rating, 0) / totalPlayers || 0;
-    const averageAge = 24.3; // This would be calculated from date_of_birth in real app
+    const averageAge = 24.3;
     const totalGoals = players.reduce((acc, p) => acc + (p.goals || 0), 0);
 
     return { totalPlayers, averageRating, averageAge, totalGoals };
@@ -136,45 +133,54 @@ const TeamManagement = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      {/* Header - Improved mobile layout */}
+      <div className="flex flex-col gap-4 mb-6 sm:mb-8">
+        <div className="flex items-center gap-3">
           {team?.logo && (
             <img
               src={team.logo}
               alt={team.name}
-              className="w-16 h-16 rounded-xl border-2 border-slate-200 dark:border-slate-700"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl border-2 border-slate-200 dark:border-slate-700"
             />
           )}
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent truncate">
               {team?.name} Squad
             </h1>
-            <p className="text-lg text-muted-foreground">
-              Manage your team roster and player information
+            <p className="text-sm sm:text-base text-muted-foreground truncate">
+              Manage your team roster
             </p>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+        {/* Action Buttons - Stack on mobile */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 flex-1 sm:flex-none"
+          >
             <Upload className="w-4 h-4" />
-            Import
+            <span className="hidden sm:inline">Import</span>
           </Button>
-          <Button className="gap-2 bg-gradient-to-r from-green-600 to-emerald-600">
+          <Button
+            size="sm"
+            className="gap-2 flex-1 sm:flex-none bg-gradient-to-r from-green-600 to-emerald-600"
+          >
             <Plus className="w-4 h-4" />
-            Add Player
+            <span className="hidden sm:inline">Add Player</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>
 
-      {/* Squad Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      {/* Squad Overview - Better mobile grid */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatCard
           icon={Users}
           value={squadStats.totalPlayers.toString()}
-          label="Total Players"
+          label="Players"
           color="text-blue-600"
         />
         <StatCard
@@ -186,7 +192,7 @@ const TeamManagement = () => {
         <StatCard
           icon={TrendingUp}
           value={squadStats.totalGoals.toString()}
-          label="Total Goals"
+          label="Goals"
           color="text-green-600"
         />
         <StatCard
@@ -197,19 +203,22 @@ const TeamManagement = () => {
         />
       </div>
 
-      {/* Controls */}
-      <Card className="p-6 mb-6 border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
+      {/* Controls - Improved mobile layout */}
+      <Card className="p-4 sm:p-6 mb-4 sm:mb-6 border-0 shadow-lg">
+        <div className="space-y-3">
+          {/* Search */}
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search players by name or position..."
-              className="pl-10"
+              placeholder="Search players..."
+              className="pl-10 text-sm sm:text-base"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto">
+
+          {/* Filter Buttons - Horizontal scroll on mobile */}
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
             {positions.map((position) => {
               const Icon = position.icon;
               return (
@@ -220,9 +229,9 @@ const TeamManagement = () => {
                   }
                   size="sm"
                   onClick={() => setActiveFilter(position.value)}
-                  className="whitespace-nowrap gap-2"
+                  className="whitespace-nowrap flex-shrink-0 gap-1 sm:gap-2 text-xs sm:text-sm"
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
                   {position.label}
                 </Button>
               );
@@ -235,28 +244,40 @@ const TeamManagement = () => {
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
-        className="space-y-6"
+        className="space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all" className="gap-2">
-            <Users className="w-4 h-4" />
-            All Players
+        <TabsList className="grid w-full grid-cols-4 h-10">
+          <TabsTrigger
+            value="all"
+            className="text-xs sm:text-sm gap-1 sm:gap-2"
+          >
+            <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">All</span>
           </TabsTrigger>
-          <TabsTrigger value="starters" className="gap-2">
-            <Star className="w-4 h-4" />
-            Starting XI
+          <TabsTrigger
+            value="starters"
+            className="text-xs sm:text-sm gap-1 sm:gap-2"
+          >
+            <Star className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Starters</span>
           </TabsTrigger>
-          <TabsTrigger value="reserves" className="gap-2">
-            <Shirt className="w-4 h-4" />
-            Reserves
+          <TabsTrigger
+            value="reserves"
+            className="text-xs sm:text-sm gap-1 sm:gap-2"
+          >
+            <Shirt className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Reserves</span>
           </TabsTrigger>
-          <TabsTrigger value="youth" className="gap-2">
-            <Zap className="w-4 h-4" />
-            Youth
+          <TabsTrigger
+            value="youth"
+            className="text-xs sm:text-sm gap-1 sm:gap-2"
+          >
+            <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Youth</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="space-y-4">
+        <TabsContent value="all" className="space-y-3 sm:space-y-4">
           {filteredPlayers.map((player) => (
             <PlayerCard
               key={player.id}
@@ -268,40 +289,40 @@ const TeamManagement = () => {
           ))}
 
           {filteredPlayers.length === 0 && (
-            <Card className="p-12 text-center border-0 bg-slate-50 dark:bg-slate-800/50">
-              <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <h3 className="text-xl font-semibold mb-2">No players found</h3>
-              <p className="text-muted-foreground mb-4">
+            <Card className="p-8 text-center border-2 border-dashed">
+              <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+              <h3 className="font-semibold text-lg mb-2">No players found</h3>
+              <p className="text-muted-foreground mb-4 text-sm">
                 {searchTerm
-                  ? "Try adjusting your search terms"
+                  ? "Try adjusting your search"
                   : "No players in the squad"}
               </p>
-              <Button className="gap-2">
+              <Button size="sm" className="gap-2">
                 <Plus className="w-4 h-4" />
-                Add First Player
+                Add Player
               </Button>
             </Card>
           )}
         </TabsContent>
 
         <TabsContent value="starters">
-          <div className="text-center py-12 text-muted-foreground">
-            <Target className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p>Starting XI selection coming soon</p>
+          <div className="text-center py-8 text-muted-foreground">
+            <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">Starting XI selection coming soon</p>
           </div>
         </TabsContent>
 
         <TabsContent value="reserves">
-          <div className="text-center py-12 text-muted-foreground">
-            <Shirt className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p>Reserve players will appear here</p>
+          <div className="text-center py-8 text-muted-foreground">
+            <Shirt className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">Reserve players will appear here</p>
           </div>
         </TabsContent>
 
         <TabsContent value="youth">
-          <div className="text-center py-12 text-muted-foreground">
-            <Zap className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p>Youth team players coming soon</p>
+          <div className="text-center py-8 text-muted-foreground">
+            <Zap className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">Youth team players coming soon</p>
           </div>
         </TabsContent>
       </Tabs>
@@ -310,13 +331,15 @@ const TeamManagement = () => {
 };
 
 const StatCard = ({ icon: Icon, value, label, color }) => (
-  <Card className="p-4 text-center hover:shadow-lg transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+  <Card className="p-3 text-center hover:shadow-lg transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
     <CardContent className="p-0">
-      <Icon className={cn("w-8 h-8 mx-auto mb-2", color)} />
-      <div className="text-2xl font-bold text-slate-900 dark:text-white">
+      <Icon className={cn("w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2", color)} />
+      <div className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
         {value}
       </div>
-      <div className="text-sm text-muted-foreground font-medium">{label}</div>
+      <div className="text-xs sm:text-sm text-muted-foreground font-medium">
+        {label}
+      </div>
     </CardContent>
   </Card>
 );
@@ -327,107 +350,81 @@ const PlayerCard = ({
   getRatingColor,
   getFormColor,
 }) => (
-  <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-    <CardContent className="p-6">
-      <div className="flex items-center gap-6">
-        {/* Player Number and Photo */}
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+  <Card className="hover:shadow-lg transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+    <CardContent className="p-4">
+      <div className="flex items-start gap-3">
+        {/* Player Avatar Section */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
             {player.jersey_number}
           </div>
           {player.photo ? (
             <img
               src={player.photo}
               alt={player.name}
-              className="w-16 h-16 rounded-2xl object-cover border-2 border-slate-200 dark:border-slate-700"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
             />
           ) : (
-            <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded-2xl flex items-center justify-center">
-              <Shirt className="w-8 h-8 text-slate-400" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-200 dark:bg-slate-700 rounded-xl flex items-center justify-center">
+              <Shirt className="w-5 h-5 text-slate-400" />
             </div>
           )}
         </div>
 
-        {/* Player Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <h3 className="font-semibold text-xl text-slate-900 dark:text-white truncate">
+        {/* Player Info - Improved mobile layout */}
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Name and Rating */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold text-base truncate flex-1 min-w-[120px]">
               {player.name}
             </h3>
-            <Badge
-              variant="outline"
-              className={cn(
-                "font-medium border-2",
-                getPositionColor(player.position)
-              )}
-            >
-              {player.position}
-            </Badge>
-            <Badge className={cn("font-medium", getRatingColor(player.rating))}>
+            <Badge className={cn("text-xs", getRatingColor(player.rating))}>
               <Star className="w-3 h-3 mr-1 fill-current" />
               {player.rating}
             </Badge>
           </div>
 
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Form:
-              </span>
-              <span
-                className={cn(
-                  "text-sm font-semibold",
-                  getFormColor(player.form)
-                )}
-              >
-                {player.form}/5
-              </span>
+          {/* Position and Stats */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-xs border-2",
+                getPositionColor(player.position)
+              )}
+            >
+              {player.position}
+            </Badge>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Form: {player.form}/5</span>
+              <span className="text-green-600">G: {player.goals || 0}</span>
+              <span className="text-blue-600">A: {player.assists || 0}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Goals:
-              </span>
-              <span className="text-sm font-semibold text-green-600">
-                {player.goals || 0}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Assists:
-              </span>
-              <span className="text-sm font-semibold text-blue-600">
-                {player.assists || 0}
-              </span>
-            </div>
-            {player.nationality && (
-              <div className="text-sm text-muted-foreground">
-                {player.nationality}
-              </div>
-            )}
+          </div>
+
+          {/* Additional Info */}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+            {player.nationality && <span>{player.nationality}</span>}
             {player.preferred_foot && (
-              <div className="text-sm text-muted-foreground">
-                {player.preferred_foot} footed
-              </div>
+              <span>{player.preferred_foot} footed</span>
             )}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Eye className="w-4 h-4" />
-            View
+        {/* Actions - Vertical on mobile */}
+        <div className="flex flex-col gap-1">
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+            <Eye className="w-3 h-3" />
           </Button>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Edit className="w-4 h-4" />
-            Edit
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+            <Edit className="w-3 h-3" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3 h-3" />
           </Button>
         </div>
       </div>
@@ -436,37 +433,42 @@ const PlayerCard = ({
 );
 
 const TeamManagementSkeleton = () => (
-  <div className="container mx-auto px-4 py-8">
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4">
-      <div className="flex items-center gap-4">
-        <Skeleton className="w-16 h-16 rounded-xl" />
-        <div>
-          <Skeleton className="h-10 w-64 mb-2" />
-          <Skeleton className="h-6 w-48" />
+  <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+    {/* Header Skeleton */}
+    <div className="flex flex-col gap-4 mb-6">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-6 sm:h-8 w-32 sm:w-48" />
+          <Skeleton className="h-4 w-24" />
         </div>
       </div>
       <div className="flex gap-2">
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-9 flex-1 sm:flex-none sm:w-24" />
+        <Skeleton className="h-9 flex-1 sm:flex-none sm:w-28" />
       </div>
     </div>
 
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    {/* Stats Skeleton */}
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
       {[...Array(4)].map((_, i) => (
-        <Card key={i} className="p-4">
+        <Card key={i} className="p-3">
           <CardContent className="p-0 text-center space-y-2">
-            <Skeleton className="h-8 w-8 mx-auto" />
-            <Skeleton className="h-8 w-12 mx-auto" />
-            <Skeleton className="h-4 w-16 mx-auto" />
+            <Skeleton className="h-6 w-6 mx-auto" />
+            <Skeleton className="h-6 w-8 mx-auto" />
+            <Skeleton className="h-3 w-12 mx-auto" />
           </CardContent>
         </Card>
       ))}
     </div>
 
-    <Skeleton className="h-20 w-full mb-6 rounded-xl" />
-    <div className="space-y-4">
-      {[...Array(5)].map((_, i) => (
-        <Skeleton key={i} className="h-32 w-full rounded-xl" />
+    {/* Controls Skeleton */}
+    <Skeleton className="h-20 w-full mb-4 rounded-lg" />
+
+    {/* Players Skeleton */}
+    <div className="space-y-3">
+      {[...Array(3)].map((_, i) => (
+        <Skeleton key={i} className="h-20 w-full rounded-lg" />
       ))}
     </div>
   </div>
