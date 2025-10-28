@@ -9,7 +9,6 @@ import {
   Users,
   Plus,
   Search,
-  Upload,
   Shirt,
   Star,
   TrendingUp,
@@ -20,11 +19,28 @@ import {
   Target,
   Zap,
   Shield,
+  Save,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Player {
   id: string;
@@ -43,6 +59,16 @@ interface Player {
   height_cm?: number;
 }
 
+interface NewPlayerForm {
+  name: string;
+  jersey_number: number;
+  position: string;
+  nationality: string;
+  date_of_birth: string;
+  preferred_foot: string;
+  height_cm: number;
+}
+
 const TeamManagement = () => {
   const { user } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
@@ -51,6 +77,18 @@ const TeamManagement = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false);
+  const [addingPlayer, setAddingPlayer] = useState(false);
+
+  const [newPlayer, setNewPlayer] = useState<NewPlayerForm>({
+    name: "",
+    jersey_number: 1,
+    position: "DF",
+    nationality: "",
+    date_of_birth: "",
+    preferred_foot: "right",
+    height_cm: 180,
+  });
 
   useEffect(() => {
     fetchTeamData();
@@ -71,6 +109,50 @@ const TeamManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddPlayer = async () => {
+    try {
+      setAddingPlayer(true);
+
+      const response = await apiClient.post("/manager/players", {
+        name: newPlayer.name,
+        jersey_number: newPlayer.jersey_number,
+        position: newPlayer.position,
+        nationality: newPlayer.nationality,
+        date_of_birth: newPlayer.date_of_birth,
+        preferred_foot: newPlayer.preferred_foot,
+        height_cm: newPlayer.height_cm,
+      });
+
+      if (response.data.success) {
+        // Refresh the players list
+        await fetchTeamData();
+        setAddPlayerOpen(false);
+        resetNewPlayerForm();
+
+        console.log("Player added successfully:", response.data.player);
+      }
+    } catch (error: any) {
+      console.error("Failed to add player:", error);
+      alert(
+        `Failed to add player: ${error.response?.data?.error || error.message}`
+      );
+    } finally {
+      setAddingPlayer(false);
+    }
+  };
+
+  const resetNewPlayerForm = () => {
+    setNewPlayer({
+      name: "",
+      jersey_number: 1,
+      position: "DF",
+      nationality: "",
+      date_of_birth: "",
+      preferred_foot: "right",
+      height_cm: 180,
+    });
   };
 
   const positions = [
@@ -156,22 +238,164 @@ const TeamManagement = () => {
 
         {/* Action Buttons - Stack on mobile */}
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 flex-1 sm:flex-none"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="hidden sm:inline">Import</span>
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2 flex-1 sm:flex-none bg-gradient-to-r from-green-600 to-emerald-600"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Player</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
+          <Dialog open={addPlayerOpen} onOpenChange={setAddPlayerOpen}>
+            <DialogTrigger asChild>
+              <Button
+                size="sm"
+                className="gap-2 flex-1 sm:flex-none bg-gradient-to-r from-green-600 to-emerald-600"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Player</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Player</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter player name"
+                    value={newPlayer.name}
+                    onChange={(e) =>
+                      setNewPlayer({ ...newPlayer, name: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="jersey_number">Jersey Number</Label>
+                    <Input
+                      id="jersey_number"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={newPlayer.jersey_number}
+                      onChange={(e) =>
+                        setNewPlayer({
+                          ...newPlayer,
+                          jersey_number: parseInt(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="position">Position</Label>
+                    <Select
+                      value={newPlayer.position}
+                      onValueChange={(value) =>
+                        setNewPlayer({ ...newPlayer, position: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="GK">Goalkeeper</SelectItem>
+                        <SelectItem value="DF">Defender</SelectItem>
+                        <SelectItem value="MF">Midfielder</SelectItem>
+                        <SelectItem value="FW">Forward</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nationality">Nationality</Label>
+                  <Input
+                    id="nationality"
+                    placeholder="Country"
+                    value={newPlayer.nationality}
+                    onChange={(e) =>
+                      setNewPlayer({
+                        ...newPlayer,
+                        nationality: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date_of_birth">Date of Birth</Label>
+                    <Input
+                      id="date_of_birth"
+                      type="date"
+                      value={newPlayer.date_of_birth}
+                      onChange={(e) =>
+                        setNewPlayer({
+                          ...newPlayer,
+                          date_of_birth: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="height">Height (cm)</Label>
+                    <Input
+                      id="height"
+                      type="number"
+                      min="150"
+                      max="220"
+                      value={newPlayer.height_cm}
+                      onChange={(e) =>
+                        setNewPlayer({
+                          ...newPlayer,
+                          height_cm: parseInt(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="preferred_foot">Preferred Foot</Label>
+                  <Select
+                    value={newPlayer.preferred_foot}
+                    onValueChange={(value) =>
+                      setNewPlayer({ ...newPlayer, preferred_foot: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="right">Right</SelectItem>
+                      <SelectItem value="left">Left</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAddPlayerOpen(false);
+                    resetNewPlayerForm();
+                  }}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddPlayer}
+                  disabled={addingPlayer || !newPlayer.name.trim()}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {addingPlayer ? "Adding..." : "Add Player"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -297,7 +521,11 @@ const TeamManagement = () => {
                   ? "Try adjusting your search"
                   : "No players in the squad"}
               </p>
-              <Button size="sm" className="gap-2">
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={() => setAddPlayerOpen(true)}
+              >
                 <Plus className="w-4 h-4" />
                 Add Player
               </Button>
@@ -444,7 +672,6 @@ const TeamManagementSkeleton = () => (
         </div>
       </div>
       <div className="flex gap-2">
-        <Skeleton className="h-9 flex-1 sm:flex-none sm:w-24" />
         <Skeleton className="h-9 flex-1 sm:flex-none sm:w-28" />
       </div>
     </div>

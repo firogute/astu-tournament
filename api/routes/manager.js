@@ -1,4 +1,4 @@
-// routes/manager.js - UPDATED WITH LINEUP SUPPORT
+// routes/manager.js - FIXED LINEUP SAVING
 import { Router } from "express";
 import { supabase } from "../lib/supabaseClient.js";
 import { authenticateJWT, authorizeRoles } from "../middleware/auth.js";
@@ -102,7 +102,6 @@ router.get(
 );
 
 // Get manager's team info
-// Get manager's team info (UPDATED)
 router.get(
   "/my-team",
   authenticateJWT,
@@ -397,7 +396,7 @@ router.post(
   }
 );
 
-// Save lineup for a match
+// Save lineup for a match - FIXED VERSION
 router.post(
   "/lineups",
   authenticateJWT,
@@ -406,58 +405,143 @@ router.post(
     try {
       const { match_id, formation_id, formation_structure, players } = req.body;
 
+      console.log("Received lineup data:", {
+        match_id,
+        formation_id,
+        formation_structure,
+        players,
+      });
+
+      // Validate UUID format for formation_id
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!formation_id || !uuidRegex.test(formation_id)) {
+        return res.status(400).json({
+          error: "Invalid formation ID format. Must be a valid UUID.",
+        });
+      }
+
       const { data: user } = await supabase
         .from("users")
         .select("team_id")
         .eq("id", req.user.id)
         .single();
 
-      // Start transaction
-      const { data: lineup, error: lineupError } = await supabase
+      if (!user || !user.team_id) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // Check if lineup already exists for this match and team
+      const { data: existingLineup } = await supabase
         .from("match_lineups")
-        .upsert({
-          match_id,
-          team_id: user.team_id,
-          formation_id,
-          formation_structure,
-          created_by: req.user.id,
-          is_confirmed: true,
-        })
-        .select()
+        .select("id")
+        .eq("match_id", match_id)
+        .eq("team_id", user.team_id)
         .single();
 
-      if (lineupError) {
-        return res.status(400).json({ error: lineupError.message });
+      let lineupId;
+
+      if (existingLineup) {
+        // Update existing lineup
+        const { data: updatedLineup, error: updateError } = await supabase
+          .from("match_lineups")
+          .update({
+            formation_id,
+            formation_structure,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingLineup.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          return res.status(400).json({ error: updateError.message });
+        }
+
+        lineupId = updatedLineup.id;
+      } else {
+        // Create new lineup
+        const { data: newLineup, error: lineupError } = await supabase
+          .from("match_lineups")
+          .insert({
+            match_id,
+            team_id: user.team_id,
+            formation_id,
+            formation_structure,
+            created_by: req.user.id,
+            is_confirmed: true,
+          })
+          .select()
+          .single();
+
+        if (lineupError) {
+          console.error("Lineup creation error:", lineupError);
+          return res.status(400).json({ error: lineupError.message });
+        }
+
+        lineupId = newLineup.id;
       }
 
       // Delete existing lineup players
-      await supabase.from("lineup_players").delete().eq("lineup_id", lineup.id);
+      const { error: deleteError } = await supabase
+        .from("lineup_players")
+        .delete()
+        .eq("lineup_id", lineupId);
 
-      // Insert new lineup players
+      if (deleteError) {
+        console.error("Delete players error:", deleteError);
+        return res.status(400).json({ error: deleteError.message });
+      }
+
+      // Insert new lineup players - FIXED: use player_id instead of id
       const lineupPlayers = players.map((player, index) => ({
-        lineup_id: lineup.id,
-        player_id: player.id,
+        lineup_id: lineupId,
+        player_id: player.player_id || player.id, // Support both formats
         position: player.position,
         jersey_number: player.jersey_number,
         is_starter: true,
         position_order: index,
       }));
 
+      console.log("Inserting lineup players:", lineupPlayers);
+
       const { error: playersError } = await supabase
         .from("lineup_players")
         .insert(lineupPlayers);
 
       if (playersError) {
+        console.error("Insert players error:", playersError);
         return res.status(400).json({ error: playersError.message });
+      }
+
+      // Fetch the complete lineup with relations
+      const { data: completeLineup, error: fetchError } = await supabase
+        .from("match_lineups")
+        .select(
+          `
+          *,
+          formation:team_formations(*),
+          players:lineup_players(
+            player:players(*),
+            position,
+            is_starter
+          )
+        `
+        )
+        .eq("id", lineupId)
+        .single();
+
+      if (fetchError) {
+        console.error("Fetch lineup error:", fetchError);
       }
 
       res.json({
         success: true,
         message: "Lineup saved successfully",
-        lineup,
+        lineup: completeLineup,
       });
     } catch (err) {
-      console.error(err);
+      console.error("Lineup save error:", err);
       res.status(500).json({ error: "Server error" });
     }
   }

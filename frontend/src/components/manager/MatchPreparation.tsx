@@ -26,22 +26,37 @@ import apiClient from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 
+// Updated interfaces to match API response
+interface Team {
+  id: string;
+  name: string;
+  short_name: string;
+  logo?: string;
+}
+
 interface Match {
   id: string;
-  date: string;
-  time: string;
-  venue: string;
-  opponent: {
+  match_date: string;
+  match_time: string;
+  venue_id?: string;
+  venue?: {
     id: string;
     name: string;
-    short_name: string;
-    logo?: string;
+    location?: string;
   };
-  isHome: boolean;
-  tournament: string;
+  home_team_id: string;
+  away_team_id: string;
+  home_team: Team;
+  away_team: Team;
+  tournament?: {
+    id: string;
+    name: string;
+    season: string;
+  };
   status: string;
   home_score?: number;
   away_score?: number;
+  isHome?: boolean; // We'll calculate this
 }
 
 interface OpponentAnalysis {
@@ -60,6 +75,7 @@ const MatchPreparation = () => {
   const [opponentAnalysis, setOpponentAnalysis] =
     useState<OpponentAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMatches();
@@ -68,29 +84,49 @@ const MatchPreparation = () => {
   const fetchMatches = async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const [upcomingRes, recentRes] = await Promise.all([
         apiClient.get("/manager/upcoming-matches"),
         apiClient.get("/manager/recent-results"),
       ]);
 
-      setUpcomingMatches(upcomingRes.data.matches || []);
-      setRecentMatches(recentRes.data.matches || []);
+      // Transform API data to match our interface
+      const upcomingData = (upcomingRes.data.matches || []).map(
+        (match: any) => ({
+          ...match,
+          isHome: match.home_team_id === user?.team_id,
+        })
+      );
+
+      const recentData = (recentRes.data.matches || []).map((match: any) => ({
+        ...match,
+        isHome: match.home_team_id === user?.team_id,
+      }));
+
+      setUpcomingMatches(upcomingData);
+      setRecentMatches(recentData);
 
       // Auto-select first upcoming match
-      if (upcomingRes.data.matches?.length > 0) {
-        setSelectedMatch(upcomingRes.data.matches[0]);
-        fetchOpponentAnalysis(upcomingRes.data.matches[0].opponent.id);
+      if (upcomingData.length > 0) {
+        setSelectedMatch(upcomingData[0]);
+        fetchOpponentAnalysis(upcomingData[0]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch matches:", error);
+      setError("Failed to load matches. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchOpponentAnalysis = async (opponentId: string) => {
-    // In a real app, this would fetch actual opponent data
-    setTimeout(() => {
+  const fetchOpponentAnalysis = async (match: Match) => {
+    try {
+      // Get opponent team (the one that's not our team)
+      const opponentTeam = match.isHome ? match.away_team : match.home_team;
+
+      // In a real app, this would fetch actual opponent data from your API
+      // For now, we'll use mock data
       setOpponentAnalysis({
         formation: "4-2-3-1",
         strengths: ["Counter attacks", "Set pieces", "Midfield pressure"],
@@ -106,16 +142,19 @@ const MatchPreparation = () => {
         ],
         recentForm: "WWLWD",
       });
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to fetch opponent analysis:", error);
+    }
   };
 
   const handleMatchSelect = (match: Match) => {
     setSelectedMatch(match);
-    fetchOpponentAnalysis(match.opponent.id);
+    fetchOpponentAnalysis(match);
   };
 
   const getMatchResult = (match: Match) => {
-    if (!match.home_score && !match.away_score) return null;
+    if (match.home_score === undefined || match.away_score === undefined)
+      return null;
 
     const isWin =
       (match.isHome && match.home_score > match.away_score) ||
@@ -125,8 +164,23 @@ const MatchPreparation = () => {
     return { isWin, isDraw, score: `${match.home_score}-${match.away_score}` };
   };
 
+  const getOpponentTeam = (match: Match) => {
+    return match.isHome ? match.away_team : match.home_team;
+  };
+
   if (loading) {
     return <MatchPreparationSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <div className="text-red-500 text-lg mb-4">{error}</div>
+          <Button onClick={fetchMatches}>Retry</Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -198,6 +252,13 @@ const MatchPreparation = () => {
                     type="recent"
                   />
                 ))}
+
+                {recentMatches.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No recent matches found</p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </Card>
@@ -207,7 +268,8 @@ const MatchPreparation = () => {
             <Card className="p-6 border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                 <Target className="w-5 h-5 text-red-600" />
-                Opponent Analysis: {selectedMatch.opponent.short_name}
+                Opponent Analysis:{" "}
+                {getOpponentTeam(selectedMatch)?.short_name || "Opponent"}
               </h2>
 
               <div className="grid md:grid-cols-2 gap-6">
@@ -399,22 +461,26 @@ const MatchPreparation = () => {
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-orange-600" />
                   <span className="text-sm font-medium">
-                    {selectedMatch.tournament}
+                    {selectedMatch.tournament?.name || "Friendly Match"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-orange-600" />
                   <span className="text-sm">
-                    {new Date(selectedMatch.date).toLocaleDateString()}
+                    {new Date(selectedMatch.match_date).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-orange-600" />
-                  <span className="text-sm">{selectedMatch.time}</span>
+                  <span className="text-sm">{selectedMatch.match_time}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-orange-600" />
-                  <span className="text-sm">{selectedMatch.venue}</span>
+                  <span className="text-sm">
+                    {selectedMatch.venue?.name ||
+                      selectedMatch.venue?.location ||
+                      "TBD"}
+                  </span>
                 </div>
                 <div className="pt-3 border-t border-orange-200 dark:border-orange-800">
                   <div className="text-center">
@@ -422,7 +488,7 @@ const MatchPreparation = () => {
                       {selectedMatch.isHome ? "HOME" : "AWAY"} MATCH
                     </div>
                     <div className="text-sm text-orange-700 dark:text-orange-300">
-                      vs {selectedMatch.opponent.name}
+                      vs {getOpponentTeam(selectedMatch)?.name || "Opponent"}
                     </div>
                   </div>
                 </div>
@@ -454,11 +520,22 @@ const MatchPreparation = () => {
   );
 };
 
-const MatchSelectorCard = ({ match, isSelected, onSelect, type }) => {
-  const result = getMatchResult(match);
+interface MatchSelectorCardProps {
+  match: Match;
+  isSelected: boolean;
+  onSelect: () => void;
+  type: "upcoming" | "recent";
+}
 
-  function getMatchResult(match: Match) {
-    if (!match.home_score && !match.away_score) return null;
+const MatchSelectorCard = ({
+  match,
+  isSelected,
+  onSelect,
+  type,
+}: MatchSelectorCardProps) => {
+  const getMatchResult = (match: Match) => {
+    if (match.home_score === undefined || match.away_score === undefined)
+      return null;
 
     const isWin =
       (match.isHome && match.home_score > match.away_score) ||
@@ -466,7 +543,10 @@ const MatchSelectorCard = ({ match, isSelected, onSelect, type }) => {
     const isDraw = match.home_score === match.away_score;
 
     return { isWin, isDraw, score: `${match.home_score}-${match.away_score}` };
-  }
+  };
+
+  const result = getMatchResult(match);
+  const opponentTeam = match.isHome ? match.away_team : match.home_team;
 
   return (
     <Card
@@ -504,17 +584,18 @@ const MatchSelectorCard = ({ match, isSelected, onSelect, type }) => {
             <div>
               <div className="font-semibold text-slate-900 dark:text-white">
                 {match.isHome ? "vs " : "at "}
-                {match.opponent.short_name}
+                {opponentTeam?.short_name || "Opponent"}
               </div>
               <div className="text-xs text-muted-foreground">
-                {new Date(match.date).toLocaleDateString()} • {match.time}
+                {new Date(match.match_date).toLocaleDateString()} •{" "}
+                {match.match_time}
               </div>
             </div>
           </div>
 
           <div className="text-right">
             <Badge variant="outline" className="mb-1">
-              {match.tournament}
+              {match.tournament?.name || "Friendly"}
             </Badge>
             {result && (
               <div className="text-sm font-semibold">{result.score}</div>
