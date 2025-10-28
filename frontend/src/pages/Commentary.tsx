@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Video } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/lib/api";
@@ -14,9 +14,9 @@ import { GiWhistle } from "react-icons/gi";
 import MatchSelector from "@/components/commentary/MatchSelector";
 import MatchController from "@/components/commentary/MatchController";
 import EventPanel from "@/components/commentary/EventPanel";
-import CommentaryPane
-import TimelineSidebar from "./components/commentary/TimelineSidebar";
-import EventModal from "./components/commentary/EventModal";
+import CommentaryPanel from "@/components/commentary/CommentaryPanel";
+import TimelineSidebar from "@/components/commentary/TimelineSidebar";
+import EventModal from "@/components/commentary/EventModal";
 
 const Commentary = () => {
   const [selectedMatch, setSelectedMatch] = useState("");
@@ -139,6 +139,7 @@ const Commentary = () => {
             <div className="lg:col-span-2 space-y-6">
               <MatchController
                 matchStatus={matchStatus}
+                setMatchStatus={setMatchStatus}
                 matchMinute={matchMinute}
                 setMatchMinute={setMatchMinute}
                 selectedMatch={selectedMatch}

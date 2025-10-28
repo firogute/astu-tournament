@@ -13,8 +13,9 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { FaFootballBall } from "react-icons/fa";
-import { eventCategories } from "../constants/eventCategories";
-import { useEventMutations } from "../hooks/useEventMutations";
+import { eventCategories } from "@/constants/eventCategories";
+import { useEventMutations } from "@/hooks/useEventMutations";
+import { toast } from "sonner";
 
 const EventPanel = ({
   selectedTeam,
