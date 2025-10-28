@@ -77,7 +77,7 @@ const updatePlayerStats = async (
 // Helper function to update match score - MATCHES YOUR SCHEMA
 const updateMatchScore = async (matchId, teamId, isOwnGoal = false) => {
   try {
-    // Get match details
+    // Get match details - use explicit table references
     const { data: match, error: matchError } = await supabase
       .from("matches")
       .select("home_team_id, away_team_id, home_score, away_score")
@@ -91,16 +91,16 @@ const updateMatchScore = async (matchId, teamId, isOwnGoal = false) => {
     if (isOwnGoal) {
       // Own goal: goal goes to opposite team
       if (teamId === match.home_team_id) {
-        updateData = { away_score: match.away_score + 1 };
+        updateData = { away_score: (match.away_score || 0) + 1 };
       } else {
-        updateData = { home_score: match.home_score + 1 };
+        updateData = { home_score: (match.home_score || 0) + 1 };
       }
     } else {
       // Normal goal
       if (teamId === match.home_team_id) {
-        updateData = { home_score: match.home_score + 1 };
+        updateData = { home_score: (match.home_score || 0) + 1 };
       } else {
-        updateData = { away_score: match.away_score + 1 };
+        updateData = { away_score: (match.away_score || 0) + 1 };
       }
     }
 
@@ -350,22 +350,34 @@ const handleSubstitutionEvent = async (eventData) => {
 const handleGenericEvent = async (eventData) => {
   const { match_id, team_id, event_type, minute } = eventData;
 
-  // Update match stats for events like corners, fouls, offsides
-  await updateMatchStats(match_id, team_id, event_type);
+  try {
+    await updateMatchStats(match_id, team_id, event_type);
+  } catch (error) {
+    console.error("Error in handleGenericEvent:", error);
+  }
 };
 
-// Update match statistics - USING YOUR EXACT match_stats TABLE FIELDS
+// FIXED: updateMatchStats function - completely rewritten to avoid joins
 const updateMatchStats = debounce(async (matchId, teamId, statType) => {
   try {
-    // Get current match to determine home/away
-    const { data: match } = await supabase
+    // Get current match to determine home/away - NO JOINS, just direct query
+    const { data: match, error: matchError } = await supabase
       .from("matches")
       .select("home_team_id, away_team_id")
       .eq("id", matchId)
       .single();
 
-    if (!match) return;
+    if (matchError) {
+      console.error("Error fetching match:", matchError);
+      return;
+    }
 
+    if (!match) {
+      console.error("Match not found:", matchId);
+      return;
+    }
+
+    // Use explicit property access
     const isHomeTeam = teamId === match.home_team_id;
     const teamPrefix = isHomeTeam ? "home" : "away";
 
@@ -384,14 +396,23 @@ const updateMatchStats = debounce(async (matchId, teamId, statType) => {
     };
 
     const statField = statMapping[statType];
-    if (!statField) return;
+    if (!statField) {
+      console.log(`No stat mapping for: ${statType}`);
+      return;
+    }
 
-    // Get current stats
-    const { data: currentStats } = await supabase
+    // Get current stats - direct query, no joins
+    const { data: currentStats, error: statsError } = await supabase
       .from("match_stats")
       .select("*")
       .eq("match_id", matchId)
       .single();
+
+    if (statsError && statsError.code !== "PGRST116") {
+      // PGRST116 = no rows
+      console.error("Error fetching match stats:", statsError);
+      return;
+    }
 
     const updates = {
       [statField]: (currentStats?.[statField] || 0) + 1,
@@ -399,19 +420,55 @@ const updateMatchStats = debounce(async (matchId, teamId, statType) => {
     };
 
     if (currentStats) {
-      await supabase
+      // Update existing stats
+      const { error: updateError } = await supabase
         .from("match_stats")
         .update(updates)
         .eq("match_id", matchId);
+
+      if (updateError) {
+        console.error("Error updating match stats:", updateError);
+      }
     } else {
-      await supabase
-        .from("match_stats")
-        .insert([{ match_id: matchId, ...updates }]);
+      // Insert new stats
+      const { error: insertError } = await supabase.from("match_stats").insert([
+        {
+          match_id: matchId,
+          ...updates,
+          // Initialize all stats to avoid null issues
+          possession_home: 50,
+          possession_away: 50,
+          shots_home: 0,
+          shots_away: 0,
+          shots_on_target_home: 0,
+          shots_on_target_away: 0,
+          passes_home: 0,
+          passes_away: 0,
+          pass_accuracy_home: 0.0,
+          pass_accuracy_away: 0.0,
+          fouls_home: 0,
+          fouls_away: 0,
+          corners_home: 0,
+          corners_away: 0,
+          offsides_home: 0,
+          offsides_away: 0,
+          yellow_cards_home: 0,
+          yellow_cards_away: 0,
+          red_cards_home: 0,
+          red_cards_away: 0,
+          saves_home: 0,
+          saves_away: 0,
+        },
+      ]);
+
+      if (insertError) {
+        console.error("Error inserting match stats:", insertError);
+      }
     }
   } catch (error) {
-    console.error("Error updating match stats:", error);
+    console.error("Error in updateMatchStats:", error);
   }
-}, 1000); // Debounce for 1 second
+}, 1000);
 
 // Get commentary for a match
 router.get("/:matchId", authenticateJWT, async (req, res) => {
@@ -506,24 +563,26 @@ router.post(
   }
 );
 
-// Add match event with comprehensive database updates - USING YOUR SCHEMA
+// Add match event with comprehensive database updates
 router.post(
   "/:matchId/event",
   authenticateJWT,
   authorizeRoles("admin", "manager", "commentator"),
   async (req, res) => {
     try {
+      console.log("Event data received:", req.body);
+
       const { matchId } = req.params;
       const {
         event_type,
         minute,
         player_id,
-        related_player_id, // USING YOUR SCHEMA FIELD NAME
+        related_player_id,
         team_id,
         description,
-        goal_type, // Using your additional field
-        is_penalty_scored, // Using your additional field
-        event_data, // Using your JSONB field
+        goal_type,
+        is_penalty_scored,
+        event_data,
       } = req.body;
 
       // Validate required fields
@@ -533,66 +592,44 @@ router.post(
         });
       }
 
-      // Validate event_type matches your schema constraints
-      const validEventTypes = [
-        "goal",
-        "own_goal",
-        "penalty_goal",
-        "penalty_miss",
-        "yellow_card",
-        "red_card",
-        "second_yellow",
-        "substitution_in",
-        "substitution_out",
-        "injury",
-        "var_decision",
-        "corner",
-        "free_kick",
-        "offside",
-      ];
-
-      if (!validEventTypes.includes(event_type)) {
-        return res.status(400).json({
-          error: `Invalid event type. Must be one of: ${validEventTypes.join(
-            ", "
-          )}`,
-        });
-      }
-
       const eventData = {
         match_id: matchId,
         event_type,
         minute,
         player_id: player_id || null,
-        related_player_id: related_player_id || null, // USING YOUR FIELD NAME
+        related_player_id: related_player_id || null,
         team_id,
         description: description || `${event_type} at ${minute}'`,
-        goal_type: goal_type || null, // Your additional field
-        is_penalty_scored: is_penalty_scored || null, // Your additional field
-        event_data: event_data || null, // Your JSONB field
+        goal_type: goal_type || null,
+        is_penalty_scored: is_penalty_scored || null,
+        event_data: event_data || null,
         created_at: new Date().toISOString(),
       };
 
-      // Start transaction-like process
+      console.log("Inserting event:", eventData);
+
+      // SIMPLE FIX: Insert without the problematic select that causes joins
       const { data: event, error: eventError } = await supabase
         .from("match_events")
         .insert([eventData])
-        .select(
-          `
-          *,
-          player:player_id(name, jersey_number),
-          team:team_id(name, short_name),
-          related_player:related_player_id(name, jersey_number)
-        `
-        )
+        .select() // Just select basic columns, no joins
         .single();
 
       if (eventError) {
+        console.error("Error inserting event:", eventError);
         return res.status(400).json({ error: eventError.message });
       }
 
+      console.log("Event inserted successfully:", event);
+
       // Handle the event with all database updates
-      await handleMatchEvent(eventData);
+      try {
+        await handleMatchEvent(eventData);
+        console.log("Event handling completed");
+      } catch (handleError) {
+        console.error("Error in handleMatchEvent:", handleError);
+        // Don't fail the request if event handling fails
+      }
 
       // Auto-generate commentary for important events
       if (
@@ -604,37 +641,74 @@ router.post(
           "penalty_miss",
         ].includes(event_type)
       ) {
-        const autoCommentary = generateAutoCommentary(event);
-        const commentaryData = {
-          match_id: matchId,
-          minute,
-          commentary_text: autoCommentary,
-          is_important: true,
-          event_type,
-          created_by: req.user.id,
-          created_at: new Date().toISOString(),
-        };
+        try {
+          // Get player and team names for commentary
+          const playerName = player_id
+            ? await getPlayerName(player_id)
+            : "Player";
+          const teamName = await getTeamName(team_id);
 
-        await supabase.from("commentary").insert([commentaryData]);
+          const autoCommentary = generateAutoCommentary({
+            event_type,
+            player: { name: playerName },
+            team: { name: teamName },
+            minute,
+          });
+
+          const commentaryData = {
+            match_id: matchId,
+            minute,
+            commentary_text: autoCommentary,
+            is_important: true,
+            event_type,
+            created_by: req.user.id,
+            created_at: new Date().toISOString(),
+          };
+
+          await supabase.from("commentary").insert([commentaryData]);
+          console.log("Auto commentary generated");
+        } catch (commentaryError) {
+          console.error("Error generating auto commentary:", commentaryError);
+        }
       }
 
       res.status(201).json({
         message: "Event logged successfully",
         event: event,
-        autoCommentary: [
-          "goal",
-          "own_goal",
-          "penalty_goal",
-          "red_card",
-          "penalty_miss",
-        ].includes(event_type),
       });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Server error" });
+      console.error("Unexpected error in event route:", err);
+      res.status(500).json({ error: "Server error: " + err.message });
     }
   }
 );
+
+// Helper functions to get player and team names
+async function getPlayerName(playerId) {
+  try {
+    const { data: player } = await supabase
+      .from("players")
+      .select("name")
+      .eq("id", playerId)
+      .single();
+    return player?.name || "Player";
+  } catch (error) {
+    return "Player";
+  }
+}
+
+async function getTeamName(teamId) {
+  try {
+    const { data: team } = await supabase
+      .from("teams")
+      .select("name")
+      .eq("id", teamId)
+      .single();
+    return team?.name || "Team";
+  } catch (error) {
+    return "Team";
+  }
+}
 
 // Generate automatic commentary for events
 const generateAutoCommentary = (event) => {

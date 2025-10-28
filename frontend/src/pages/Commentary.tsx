@@ -98,21 +98,19 @@ const Commentary = () => {
   const { events: matchEvents = [], commentary: commentaryEntries = [] } =
     matchData;
 
-  // Fetch lineup for selected team using commentary route
-  const { data: lineupData = {} } = useQuery({
-    queryKey: ["commentary", "lineup", selectedMatch, selectedTeam],
+  // Fetch players for selected team
+  const { data: teamPlayers = [] } = useQuery({
+    queryKey: ["commentary", "players", selectedTeam],
     queryFn: async () => {
-      if (!selectedMatch || !selectedTeam)
-        return { starters: [], substitutes: [] };
-      const response = await apiClient.get(
-        `/commentary/${selectedMatch}/lineup/${selectedTeam}`
-      );
+      if (!selectedTeam) return [];
+      const response = await apiClient.get(`/players/team/${selectedTeam}`);
       return response.data;
     },
-    enabled: !!selectedMatch && !!selectedTeam,
+    enabled: !!selectedTeam,
   });
 
-  const { starters = [], substitutes = [] } = lineupData.lineup || {};
+  // Use all players as available players (no starters/subs distinction for now)
+  const availablePlayers = teamPlayers || [];
 
   // Mutation for adding events using commentary route
   const addEventMutation = useMutation({
@@ -689,22 +687,10 @@ const Commentary = () => {
                             <SelectValue placeholder="Choose player" />
                           </SelectTrigger>
                           <SelectContent>
-                            {starters.map((player) => (
-                              <SelectItem
-                                key={player.player_id}
-                                value={player.player_id}
-                              >
-                                {player.player?.jersey_number}.{" "}
-                                {player.player?.name}
-                              </SelectItem>
-                            ))}
-                            {substitutes.map((player) => (
-                              <SelectItem
-                                key={player.player_id}
-                                value={player.player_id}
-                              >
-                                {player.player?.jersey_number}.{" "}
-                                {player.player?.name} (Sub)
+                            {availablePlayers.map((player) => (
+                              <SelectItem key={player.id} value={player.id}>
+                                {player.jersey_number}. {player.name} -{" "}
+                                {player.position}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -944,13 +930,10 @@ const Commentary = () => {
                         <SelectValue placeholder="Select player" />
                       </SelectTrigger>
                       <SelectContent>
-                        {starters.map((player) => (
-                          <SelectItem
-                            key={player.player_id}
-                            value={player.player_id}
-                          >
-                            {player.player?.jersey_number}.{" "}
-                            {player.player?.name}
+                        {availablePlayers.map((player) => (
+                          <SelectItem key={player.id} value={player.id}>
+                            {player.jersey_number}. {player.name} -{" "}
+                            {player.position}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -986,15 +969,14 @@ const Commentary = () => {
                           <SelectValue placeholder="Select assist player" />
                         </SelectTrigger>
                         <SelectContent>
-                          {starters.map((player) => (
-                            <SelectItem
-                              key={player.player_id}
-                              value={player.player_id}
-                            >
-                              {player.player?.jersey_number}.{" "}
-                              {player.player?.name}
-                            </SelectItem>
-                          ))}
+                          <SelectContent>
+                            {availablePlayers.map((player) => (
+                              <SelectItem key={player.id} value={player.id}>
+                                {player.jersey_number}. {player.name} -{" "}
+                                {player.position}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1013,13 +995,10 @@ const Commentary = () => {
                         <SelectValue placeholder="Select player coming out" />
                       </SelectTrigger>
                       <SelectContent>
-                        {starters.map((player) => (
-                          <SelectItem
-                            key={player.player_id}
-                            value={player.player_id}
-                          >
-                            {player.player?.jersey_number}.{" "}
-                            {player.player?.name}
+                        {availablePlayers.map((player) => (
+                          <SelectItem key={player.id} value={player.id}>
+                            {player.jersey_number}. {player.name} -{" "}
+                            {player.position}
                           </SelectItem>
                         ))}
                       </SelectContent>
