@@ -41,7 +41,6 @@ const MatchController = ({
   const [isRunning, setIsRunning] = useState(false);
   const [totalSeconds, setTotalSeconds] = useState(matchMinute * 60);
   const intervalRef = useRef(null);
-  const dbUpdateRef = useRef(null);
 
   // Convert total seconds to minutes for display (MM:SS)
   const displayMinutes = Math.floor(totalSeconds / 60);
@@ -82,33 +81,37 @@ const MatchController = ({
             return 90 * 60;
           }
 
+          // Update parent and database every 30 seconds
+          if (newTotalSeconds % 30 === 0) {
+            updateDatabaseTime(newMinutes);
+          }
+
           return newTotalSeconds;
         });
       }, 1000);
-
-      // Update database every 60 seconds (less frequent)
-      dbUpdateRef.current = setInterval(() => {
-        updateDatabaseTime();
-      }, 60000);
     } else {
       clearInterval(intervalRef.current);
-      clearInterval(dbUpdateRef.current);
     }
 
     return () => {
       clearInterval(intervalRef.current);
-      clearInterval(dbUpdateRef.current);
     };
   }, [isRunning, matchStatus]);
 
-  const updateDatabaseTime = async () => {
+  const updateDatabaseTime = async (currentMinutes = null) => {
     try {
-      const currentMinutes = Math.floor(totalSeconds / 60);
+      const minutesToUpdate =
+        currentMinutes !== null
+          ? currentMinutes
+          : Math.floor(totalSeconds / 60);
+
       await updateMatchMutation.mutateAsync({
-        minute: currentMinutes,
+        minute: minutesToUpdate,
         status: matchStatus,
       });
-      setMatchMinute(currentMinutes);
+
+      // Update parent component after successful DB update
+      setMatchMinute(minutesToUpdate);
     } catch (error) {
       console.error("Failed to update time in database:", error);
     }
@@ -125,7 +128,7 @@ const MatchController = ({
       setMatchStatus(updatedMatch.status);
       setMatchMinute(updatedMatch.minute);
       setTotalSeconds(updatedMatch.minute * 60);
-      setIsRunning(true);
+      setIsRunning(true); // CRITICAL: Start auto progression
       toast.success("Commentary started! Match is now live.");
     } catch (error) {
       toast.error(error.response?.data?.error || "Failed to start commentary");
@@ -135,8 +138,12 @@ const MatchController = ({
   // Pause commentary
   const handlePauseCommentary = async () => {
     try {
+      const currentMinutes = Math.floor(totalSeconds / 60);
       const response = await apiClient.post(
-        `/commentary/${selectedMatch}/pause`
+        `/commentary/${selectedMatch}/pause`,
+        {
+          minute: currentMinutes,
+        }
       );
       const updatedMatch = response.data.match;
 

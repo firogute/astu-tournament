@@ -35,6 +35,11 @@ const EventPanel = ({
       return;
     }
 
+    if (teamPlayers.length === 0) {
+      toast.error("No players available for selected team");
+      return;
+    }
+
     setCurrentEventType(eventType);
     setIsSubstitution(eventType === "substitution_in");
     setShowEventModal(true);
@@ -46,19 +51,56 @@ const EventPanel = ({
       return;
     }
 
+    // Get team name for description
+    const teamName =
+      selectedTeam === selectedMatchData?.homeTeam?.id
+        ? selectedMatchData.homeTeam?.name
+        : selectedMatchData?.awayTeam?.name;
+
     const eventData = {
       event_type: eventType,
       minute: matchMinute,
       team_id: selectedTeam,
-      description: `${eventType.replace("_", " ")} at ${matchMinute}'`,
+      description: generateQuickEventDescription(
+        eventType,
+        teamName,
+        matchMinute
+      ),
       created_at: new Date().toISOString(),
     };
 
     try {
       await addEventMutation.mutateAsync(eventData);
+      toast.success(`${formatEventType(eventType)} logged!`);
     } catch (error) {
-      // Error handled in mutation
+      toast.error(error.response?.data?.error || "Failed to log event");
     }
+  };
+
+  const generateQuickEventDescription = (eventType, teamName, minute) => {
+    const team = teamName || "Team";
+
+    switch (eventType) {
+      case "corner":
+        return `${team} wins a corner`;
+      case "free_kick":
+        return `Free kick for ${team}`;
+      case "offside":
+        return `Offside against ${team}`;
+      case "var_decision":
+        return `VAR decision for ${team}`;
+      case "injury":
+        return `Player injury for ${team}`;
+      default:
+        return `${eventType.replace("_", " ")} at ${minute}'`;
+    }
+  };
+
+  const formatEventType = (eventType) => {
+    return eventType
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   const renderEventCategory = (category, title, Icon) => (
@@ -77,7 +119,9 @@ const EventPanel = ({
             key={event.type}
             className={`h-12 md:h-16 flex flex-col gap-0.5 md:gap-1 text-xs ${event.color} text-white`}
             onClick={() =>
-              event.type === "substitution_in"
+              event.type === "substitution_in" ||
+              event.type === "goal" ||
+              event.type.includes("card")
                 ? openEventModal(event.type)
                 : quickEvent(event.type)
             }
@@ -113,6 +157,14 @@ const EventPanel = ({
           AlertCircle
         )}
       </div>
+
+      {!selectedTeam && (
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200 text-center">
+            Select a team to log events
+          </p>
+        </div>
+      )}
     </Card>
   );
 };

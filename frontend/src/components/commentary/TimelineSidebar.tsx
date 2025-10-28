@@ -59,6 +59,21 @@ const TimelineSidebar = ({ matchEvents, commentaryEntries }) => {
       .join(" ");
   };
 
+  // Safely get player name from event
+  const getPlayerName = (event) => {
+    if (event.player?.name) return event.player.name;
+    if (event.player_id) return "Player";
+    return "";
+  };
+
+  // Safely get team name from event
+  const getTeamName = (event) => {
+    if (event.team?.name) return event.team.name;
+    if (event.team?.short_name) return event.team.short_name;
+    if (event.team_id) return "Team";
+    return "";
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Events Timeline */}
@@ -73,36 +88,42 @@ const TimelineSidebar = ({ matchEvents, commentaryEntries }) => {
               No events recorded yet
             </p>
           ) : (
-            matchEvents.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-start gap-2 md:gap-3 p-2 md:p-3 bg-muted rounded-lg"
-              >
-                <Badge
-                  variant="secondary"
-                  className="mt-0.5 md:mt-1 flex-shrink-0 text-xs"
+            matchEvents.map((event) => {
+              const playerName = getPlayerName(event);
+              const teamName = getTeamName(event);
+
+              return (
+                <div
+                  key={event.id}
+                  className="flex items-start gap-2 md:gap-3 p-2 md:p-3 bg-muted rounded-lg"
                 >
-                  {event.minute}'
-                </Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-xs md:text-sm flex items-center gap-1 md:gap-2">
-                    {getEventIcon(event.event_type)}
-                    <span className="truncate">
-                      {formatEventType(event.event_type)}
-                    </span>
+                  <Badge
+                    variant="secondary"
+                    className="mt-0.5 md:mt-1 flex-shrink-0 text-xs"
+                  >
+                    {event.minute}'
+                  </Badge>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-xs md:text-sm flex items-center gap-1 md:gap-2">
+                      {getEventIcon(event.event_type)}
+                      <span className="truncate">
+                        {formatEventType(event.event_type)}
+                      </span>
+                    </div>
+                    {(playerName || teamName) && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {playerName} {teamName && `- ${teamName}`}
+                      </p>
+                    )}
+                    {event.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 md:mt-1 line-clamp-2">
+                        {event.description}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {event.player?.name}{" "}
-                    {event.team && `- ${event.team.short_name}`}
-                  </p>
-                  {event.description && (
-                    <p className="text-xs text-muted-foreground mt-0.5 md:mt-1 line-clamp-2">
-                      {event.description}
-                    </p>
-                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </Card>
@@ -125,7 +146,7 @@ const TimelineSidebar = ({ matchEvents, commentaryEntries }) => {
                     {entry.minute}'
                   </Badge>
                   <span className="text-xs text-muted-foreground truncate ml-2">
-                    {entry.user?.email}
+                    {entry.user?.email || "Commentator"}
                   </span>
                 </div>
                 <p className="text-xs md:text-sm line-clamp-3">
