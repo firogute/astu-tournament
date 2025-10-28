@@ -17,6 +17,7 @@ import venuesRoutes from "./routes/venues.js";
 import usersRoutes from "./routes/admin/users.js";
 import adminVenuesRoutes from "./routes/admin/venues.js";
 import settingsRoutes from "./routes/admin/settings.js";
+import managerRoutes from "./routes/manager.js";
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use("/api/venues", venuesRoutes);
 app.use("/api/admin/users", usersRoutes);
 app.use("/api/admin/venues", adminVenuesRoutes);
 app.use("/api/admin/settings", settingsRoutes);
+app.use("/api/manager", managerRoutes);
 
 // Example route
 app.get("/", (req, res) => {
