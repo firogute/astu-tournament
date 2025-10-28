@@ -1,3 +1,4 @@
+// In MatchController.jsx - Replace the entire component with this fixed version
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,50 +54,72 @@ const MatchController = ({
       .padStart(2, "0")}`;
   };
 
-  // Sync from parent to child
+  // CRITICAL FIX: Sync from parent to child properly
   useEffect(() => {
+    console.log("Parent matchMinute changed:", matchMinute);
     setTotalSeconds(matchMinute * 60);
   }, [matchMinute]);
 
-  // Real-time progression with seconds
+  // CRITICAL FIX: Real-time progression with PROPER auto-increment
   useEffect(() => {
+    console.log(
+      "Auto-increment effect - isRunning:",
+      isRunning,
+      "matchStatus:",
+      matchStatus
+    );
+
     if (
       isRunning &&
       (matchStatus === "first_half" || matchStatus === "second_half")
     ) {
+      console.log("Starting auto-increment timer");
+
       intervalRef.current = setInterval(() => {
         setTotalSeconds((prev) => {
           const newTotalSeconds = prev + 1;
           const newMinutes = Math.floor(newTotalSeconds / 60);
 
+          console.log("Auto-incrementing:", newMinutes, "minutes");
+
           // Auto half-time at 45 minutes
           if (matchStatus === "first_half" && newMinutes >= 45) {
+            console.log("Auto half-time reached");
             handleHalfTime();
             return 45 * 60;
           }
 
           // Auto full-time at 90 minutes
           if (matchStatus === "second_half" && newMinutes >= 90) {
+            console.log("Auto full-time reached");
             handleEndMatch();
             return 90 * 60;
           }
 
-          // Update parent and database every 30 seconds
+          // Update database every 30 seconds
           if (newTotalSeconds % 30 === 0) {
+            console.log("Updating database with minute:", newMinutes);
             updateDatabaseTime(newMinutes);
+          }
+
+          // Update parent every minute for real-time display
+          if (newTotalSeconds % 60 === 0) {
+            setMatchMinute(newMinutes);
           }
 
           return newTotalSeconds;
         });
-      }, 1000);
+      }, 1000); // Real-time: 1 second = 1 second
     } else {
+      console.log("Stopping auto-increment timer");
       clearInterval(intervalRef.current);
     }
 
     return () => {
+      console.log("Cleaning up interval");
       clearInterval(intervalRef.current);
     };
-  }, [isRunning, matchStatus]);
+  }, [isRunning, matchStatus]); // CRITICAL: Only depend on these two
 
   const updateDatabaseTime = async (currentMinutes = null) => {
     try {
@@ -104,6 +127,8 @@ const MatchController = ({
         currentMinutes !== null
           ? currentMinutes
           : Math.floor(totalSeconds / 60);
+
+      console.log("Updating database time to:", minutesToUpdate);
 
       await updateMatchMutation.mutateAsync({
         minute: minutesToUpdate,
@@ -117,20 +142,29 @@ const MatchController = ({
     }
   };
 
-  // Start commentary for scheduled/past matches
+  // CRITICAL FIX: Start commentary - PROPER auto-increment start
   const handleStartCommentary = async () => {
     try {
+      console.log("Starting commentary...");
+
       const response = await apiClient.post(
         `/commentary/${selectedMatch}/start`
       );
       const updatedMatch = response.data.match;
 
+      console.log("Commentary started response:", updatedMatch);
+
+      // CRITICAL: Update ALL states properly
       setMatchStatus(updatedMatch.status);
       setMatchMinute(updatedMatch.minute);
       setTotalSeconds(updatedMatch.minute * 60);
-      setIsRunning(true); // CRITICAL: Start auto progression
+      setIsRunning(true); // THIS IS THE KEY - start auto progression
+
+      console.log("Auto-increment should start now. isRunning:", true);
+
       toast.success("Commentary started! Match is now live.");
     } catch (error) {
+      console.error("Start commentary error:", error);
       toast.error(error.response?.data?.error || "Failed to start commentary");
     }
   };
@@ -148,7 +182,7 @@ const MatchController = ({
       const updatedMatch = response.data.match;
 
       setMatchStatus(updatedMatch.status);
-      setIsRunning(false);
+      setIsRunning(false); // Stop auto progression
       toast.info("Commentary paused");
     } catch (error) {
       toast.error(error.response?.data?.error || "Failed to pause commentary");
@@ -164,7 +198,7 @@ const MatchController = ({
       const updatedMatch = response.data.match;
 
       setMatchStatus(updatedMatch.status);
-      setIsRunning(true);
+      setIsRunning(true); // Start auto progression
       toast.success("Commentary resumed");
     } catch (error) {
       toast.error(error.response?.data?.error || "Failed to resume commentary");
@@ -292,6 +326,18 @@ const MatchController = ({
     (selectedMatchData.status === "scheduled" ||
       new Date(selectedMatchData.match_date) < new Date());
 
+  // Debug logging
+  useEffect(() => {
+    console.log(
+      "MatchController State - isRunning:",
+      isRunning,
+      "matchStatus:",
+      matchStatus,
+      "matchMinute:",
+      matchMinute
+    );
+  }, [isRunning, matchStatus, matchMinute]);
+
   return (
     <Card className="p-4 md:p-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
@@ -310,20 +356,21 @@ const MatchController = ({
           >
             {matchStatus === "scheduled"
               ? "SCHEDULED"
-              : matchStatus === "paused"
-              ? "PAUSED"
               : matchStatus === "first_half"
-              ? "1ST HALF"
+              ? "LIVE 1ST"
               : matchStatus === "half_time"
               ? "HALF TIME"
               : matchStatus === "second_half"
-              ? "2ND HALF"
+              ? "LIVE 2ND"
               : "FULL TIME"}
           </Badge>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => queryClient.invalidateQueries()}
+            onClick={() => {
+              queryClient.invalidateQueries();
+              console.log("Refreshing data...");
+            }}
             className="h-8 w-8 md:h-9 md:w-9 p-0"
           >
             <RefreshCw className="h-3 w-3 md:h-4 md:w-4" />
@@ -363,7 +410,7 @@ const MatchController = ({
 
         <div className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
           {displayMinutes}' (Elapsed:{" "}
-          {formatTime(displayMinutes, displaySeconds)})
+          {formatTime(displayMinutes, displaySeconds)}){isRunning && " ⚡ LIVE"}
         </div>
 
         {/* Manual Time Input */}
@@ -393,7 +440,7 @@ const MatchController = ({
               size="sm"
               variant="outline"
               onClick={() => quickSecondJump(-30)}
-              disabled={updateMatchMutation.isLoading}
+              disabled={updateMatchMutation.isLoading || isRunning}
               className="text-xs h-8 md:h-9"
             >
               -30s
@@ -402,7 +449,7 @@ const MatchController = ({
               size="sm"
               variant="outline"
               onClick={() => quickSecondJump(30)}
-              disabled={updateMatchMutation.isLoading}
+              disabled={updateMatchMutation.isLoading || isRunning}
               className="text-xs h-8 md:h-9"
             >
               +30s
@@ -411,7 +458,7 @@ const MatchController = ({
               size="sm"
               variant="outline"
               onClick={() => handleIncrementMinute(1)}
-              disabled={updateMatchMutation.isLoading}
+              disabled={updateMatchMutation.isLoading || isRunning}
               className="text-xs h-8 md:h-9"
             >
               +1:00
@@ -422,7 +469,7 @@ const MatchController = ({
               size="sm"
               variant="outline"
               onClick={() => handleIncrementMinute(5)}
-              disabled={updateMatchMutation.isLoading}
+              disabled={updateMatchMutation.isLoading || isRunning}
               className="text-xs h-8 md:h-9"
             >
               <FastForward className="h-3 w-3 md:h-4 md:w-4" /> +5:00
@@ -431,7 +478,7 @@ const MatchController = ({
               size="sm"
               variant="outline"
               onClick={() => handleIncrementMinute(10)}
-              disabled={updateMatchMutation.isLoading}
+              disabled={updateMatchMutation.isLoading || isRunning}
               className="text-xs h-8 md:h-9"
             >
               <SkipForward className="h-3 w-3 md:h-4 md:w-4" /> +10:00
@@ -449,7 +496,8 @@ const MatchController = ({
             disabled={
               matchStatus === "first_half" ||
               matchStatus === "second_half" ||
-              updateMatchMutation.isLoading
+              updateMatchMutation.isLoading ||
+              isRunning
             }
             className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 text-xs md:text-sm"
           >
@@ -463,7 +511,8 @@ const MatchController = ({
             disabled={
               matchStatus === "second_half" ||
               matchStatus === "first_half" ||
-              updateMatchMutation.isLoading
+              updateMatchMutation.isLoading ||
+              isRunning
             }
             className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 text-xs md:text-sm"
           >
@@ -488,7 +537,9 @@ const MatchController = ({
               variant="outline"
               onClick={handleResumeCommentary}
               disabled={
-                updateMatchMutation.isLoading || matchStatus === "paused"
+                updateMatchMutation.isLoading ||
+                matchStatus === "paused" ||
+                matchStatus === "scheduled"
               }
               className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 text-xs md:text-sm"
             >
@@ -515,7 +566,7 @@ const MatchController = ({
       {/* Auto-progression status */}
       {isRunning && (
         <div className="text-center text-xs md:text-sm text-green-600 mb-3 md:mb-4">
-          ⚡ Live: Real-time progression
+          ⚡ LIVE: Real-time progression active
         </div>
       )}
 
@@ -580,12 +631,11 @@ const MatchController = ({
         </div>
       )}
 
-      {/* Offline Mode Notice */}
-      {matchStatus !== "scheduled" && !isRunning && (
-        <div className="text-center text-xs md:text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 md:p-3 rounded-lg border border-amber-200 dark:border-amber-800 mt-3 md:mt-4">
-          ⚠️ Offline Mode: Use manual controls to progress time
-        </div>
-      )}
+      {/* Debug Info (remove in production) */}
+      <div className="text-center text-xs text-gray-500 mt-4">
+        Status: {matchStatus} | Running: {isRunning.toString()} | Minute:{" "}
+        {matchMinute}
+      </div>
     </Card>
   );
 };

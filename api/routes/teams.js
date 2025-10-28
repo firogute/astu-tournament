@@ -1,10 +1,11 @@
+// routes/teams.js
 import { Router } from "express";
 import { supabase } from "../lib/supabaseClient.js";
 import { authenticateJWT, authorizeRoles } from "../middleware/auth.js";
 
 const router = Router();
 
-// GET routes:
+// GET all teams
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase.from("teams").select("*");
@@ -16,6 +17,7 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET team by ID
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -33,7 +35,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// GET players by team ID - ADD THIS ROUTE
+// GET players by team ID
 router.get("/:id/players", async (req, res) => {
   try {
     const { id } = req.params;
@@ -65,9 +67,11 @@ router.post(
       const teamData = req.body;
       const { data, error } = await supabase
         .from("teams")
-        .insert(teamData, { returning: "representation" });
+        .insert(teamData)
+        .select()
+        .single();
       if (error) return res.status(400).json({ error: error.message });
-      res.status(201).json({ message: "Team created", team: data[0] });
+      res.status(201).json({ message: "Team created", team: data });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Server error" });

@@ -628,7 +628,8 @@ router.post(
         player_id: player_id || null,
         related_player_id: related_player_id || null,
         team_id,
-        description: description || `${event_type} at ${minute}'`,
+        description:
+          description || `${event_type.replace("_", " ")} at ${minute}'`,
         goal_type: goal_type || null,
         is_penalty_scored: is_penalty_scored || null,
         event_data: event_data || null,
@@ -637,11 +638,18 @@ router.post(
 
       console.log("Inserting event:", eventData);
 
-      // SIMPLE FIX: Insert without the problematic select that causes joins
+      // Insert with proper relationships
       const { data: event, error: eventError } = await supabase
         .from("match_events")
         .insert([eventData])
-        .select() // Just select basic columns, no joins
+        .select(
+          `
+          *,
+          player:player_id(*),
+          team:team_id(*),
+          related_player:related_player_id(*)
+        `
+        )
         .single();
 
       if (eventError) {
@@ -1075,6 +1083,7 @@ router.get("/matches/live", authenticateJWT, async (req, res) => {
 });
 
 // Start commentary - sets match to live with current date/time
+// In your commentary routes - Fix the start endpoint
 router.post(
   "/:matchId/start",
   authenticateJWT,
@@ -1084,11 +1093,14 @@ router.post(
       const { matchId } = req.params;
       const now = new Date();
 
+      console.log("Starting commentary for match:", matchId);
+
+      // Update match to live status with minute 0
       const { data: match, error } = await supabase
         .from("matches")
         .update({
-          status: "first_half",
-          minute: 1,
+          status: "first_half", // CRITICAL: Change to first_half, not live
+          minute: 0, // CRITICAL: Start from 0, not 1
           match_date: now.toISOString().split("T")[0],
           match_time: now.toTimeString().split(" ")[0],
           updated_at: now.toISOString(),
@@ -1097,14 +1109,20 @@ router.post(
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error starting commentary:", error);
+        throw error;
+      }
+
+      console.log("Match updated successfully:", match);
 
       res.json({
         message: "Commentary started successfully",
-        match,
+        match: match,
       });
     } catch (err) {
-      res.status(500).json({ error: "Server error" });
+      console.error("Start commentary error:", err);
+      res.status(500).json({ error: "Server error: " + err.message });
     }
   }
 );
