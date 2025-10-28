@@ -1,0 +1,359 @@
+-- Enable UUID extension for better primary keys
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Users and Authentication
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'manager', 'commentator')),
+    team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT true
+);
+
+-- Teams
+CREATE TABLE teams (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    short_name VARCHAR(10) NOT NULL,
+    logo VARCHAR(255),
+    color_primary VARCHAR(7) DEFAULT '#000000',
+    color_secondary VARCHAR(7) DEFAULT '#FFFFFF',
+    department VARCHAR(100),
+    founded_year INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Players
+CREATE TABLE players (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    photo VARCHAR(255),
+    jersey_number INTEGER NOT NULL,
+    position VARCHAR(2) NOT NULL CHECK (position IN ('GK', 'DF', 'MF', 'FW')),
+    nationality VARCHAR(50),
+    date_of_birth DATE,
+    height_cm INTEGER,
+    weight_kg INTEGER,
+    preferred_foot VARCHAR(5) CHECK (preferred_foot IN ('left', 'right', 'both')),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(team_id, jersey_number)
+);
+
+-- Tournaments/Seasons
+CREATE TABLE tournaments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    season VARCHAR(20) NOT NULL, -- e.g., '2025'
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('upcoming', 'active', 'completed', 'cancelled')),
+    rules TEXT,
+    points_system JSONB DEFAULT '{"win": 3, "draw": 1, "loss": 0}'::JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tournament Teams (Junction table for teams participating in tournaments)
+CREATE TABLE tournament_teams (
+    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    group_name VARCHAR(20), -- For group stages if needed
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tournament_id, team_id)
+);
+
+-- Venues
+CREATE TABLE venues (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(255),
+    capacity INTEGER,
+    facilities JSONB, -- Store facilities as JSON
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Matches
+CREATE TABLE matches (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    home_team_id UUID NOT NULL REFERENCES teams(id),
+    away_team_id UUID NOT NULL REFERENCES teams(id),
+    venue_id UUID REFERENCES venues(id),
+    match_date DATE NOT NULL,
+    match_time TIME NOT NULL,
+    status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'first_half', 'half_time', 'second_half', 'full_time', 'extra_time', 'penalties', 'postponed', 'cancelled')),
+    minute INTEGER DEFAULT 0,
+    home_score INTEGER DEFAULT 0,
+    away_score INTEGER DEFAULT 0,
+    home_penalty_score INTEGER DEFAULT 0,
+    away_penalty_score INTEGER DEFAULT 0,
+    referee VARCHAR(100),
+    attendance INTEGER,
+    weather_conditions JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CHECK (home_team_id != away_team_id)
+);
+
+-- Match Statistics
+CREATE TABLE match_stats (
+    match_id UUID PRIMARY KEY REFERENCES matches(id) ON DELETE CASCADE,
+    possession_home INTEGER DEFAULT 50,
+    possession_away INTEGER DEFAULT 50,
+    shots_home INTEGER DEFAULT 0,
+    shots_away INTEGER DEFAULT 0,
+    shots_on_target_home INTEGER DEFAULT 0,
+    shots_on_target_away INTEGER DEFAULT 0,
+    passes_home INTEGER DEFAULT 0,
+    passes_away INTEGER DEFAULT 0,
+    pass_accuracy_home DECIMAL(5,2) DEFAULT 0.0,
+    pass_accuracy_away DECIMAL(5,2) DEFAULT 0.0,
+    fouls_home INTEGER DEFAULT 0,
+    fouls_away INTEGER DEFAULT 0,
+    corners_home INTEGER DEFAULT 0,
+    corners_away INTEGER DEFAULT 0,
+    offsides_home INTEGER DEFAULT 0,
+    offsides_away INTEGER DEFAULT 0,
+    yellow_cards_home INTEGER DEFAULT 0,
+    yellow_cards_away INTEGER DEFAULT 0,
+    red_cards_home INTEGER DEFAULT 0,
+    red_cards_away INTEGER DEFAULT 0,
+    saves_home INTEGER DEFAULT 0,
+    saves_away INTEGER DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Match Events (Goals, Cards, Substitutions, etc.)
+CREATE TABLE match_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    event_type VARCHAR(30) NOT NULL CHECK (event_type IN (
+        'goal', 'own_goal', 'penalty_goal', 'penalty_miss',
+        'yellow_card', 'red_card', 'second_yellow',
+        'substitution_in', 'substitution_out',
+        'injury', 'var_decision', 'corner', 'free_kick', 'offside'
+    )),
+    minute INTEGER NOT NULL,
+    player_id UUID REFERENCES players(id) ON DELETE SET NULL,
+    related_player_id UUID REFERENCES players(id) ON DELETE SET NULL, -- For assists, substitutions
+    team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+    description TEXT,
+    event_data JSONB, -- Additional event-specific data
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Player Match Statistics
+CREATE TABLE player_match_stats (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    minutes_played INTEGER DEFAULT 0,
+    goals INTEGER DEFAULT 0,
+    assists INTEGER DEFAULT 0,
+    shots INTEGER DEFAULT 0,
+    shots_on_target INTEGER DEFAULT 0,
+    passes INTEGER DEFAULT 0,
+    pass_accuracy DECIMAL(5,2) DEFAULT 0.0,
+    tackles INTEGER DEFAULT 0,
+    interceptions INTEGER DEFAULT 0,
+    clearances INTEGER DEFAULT 0,
+    saves INTEGER DEFAULT 0,
+    goals_conceded INTEGER DEFAULT 0,
+    fouls_committed INTEGER DEFAULT 0,
+    fouls_suffered INTEGER DEFAULT 0,
+    yellow_cards INTEGER DEFAULT 0,
+    red_cards INTEGER DEFAULT 0,
+    offsides INTEGER DEFAULT 0,
+    crosses INTEGER DEFAULT 0,
+    dribbles_attempted INTEGER DEFAULT 0,
+    dribbles_successful INTEGER DEFAULT 0,
+    aerial_duels_won INTEGER DEFAULT 0,
+    aerial_duels_lost INTEGER DEFAULT 0,
+    rating DECIMAL(3,1) DEFAULT 0.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(match_id, player_id)
+);
+
+-- Team Standings (Calculated but can be cached for performance)
+CREATE TABLE team_standings (
+    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    matches_played INTEGER DEFAULT 0,
+    wins INTEGER DEFAULT 0,
+    draws INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    goals_for INTEGER DEFAULT 0,
+    goals_against INTEGER DEFAULT 0,
+    goal_difference INTEGER DEFAULT 0,
+    points INTEGER DEFAULT 0,
+    form VARCHAR(10) DEFAULT '', -- Last 5 matches: W,W,L,D,W
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tournament_id, team_id)
+);
+
+-- Commentary/Live Updates
+CREATE TABLE commentary (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    minute INTEGER NOT NULL,
+    commentary_text TEXT NOT NULL,
+    event_type VARCHAR(50), -- Optional: links to match_events
+    is_important BOOLEAN DEFAULT false,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- System Settings
+CREATE TABLE system_settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value JSONB NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Audit Log
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(50) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL,
+    resource_id UUID,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for Performance
+CREATE INDEX idx_matches_tournament_date ON matches(tournament_id, match_date DESC);
+CREATE INDEX idx_matches_status ON matches(status);
+CREATE INDEX idx_match_events_match_minute ON match_events(match_id, minute DESC);
+CREATE INDEX idx_player_match_stats_player ON player_match_stats(player_id, match_id DESC);
+CREATE INDEX idx_players_team_position ON players(team_id, position);
+CREATE INDEX idx_team_standings_tournament_points ON team_standings(tournament_id, points DESC);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+
+-- Updated_at triggers
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_matches_updated_at BEFORE UPDATE ON matches FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_match_stats_updated_at BEFORE UPDATE ON match_stats FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- Team Formations and Lineups
+CREATE TABLE team_formations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    formation_name VARCHAR(50) NOT NULL, -- e.g., "4-3-3 Attacking"
+    formation_structure VARCHAR(20) NOT NULL, -- e.g., "4-3-3"
+    description TEXT,
+    is_default BOOLEAN DEFAULT false,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Match Lineups (Actual team selections for specific matches)
+CREATE TABLE match_lineups (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    formation_id UUID REFERENCES team_formations(id) ON DELETE SET NULL,
+    formation_structure VARCHAR(20) NOT NULL, -- Redundant but useful for quick access
+    captain_id UUID REFERENCES players(id) ON DELETE SET NULL,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    is_confirmed BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(match_id, team_id)
+);
+
+-- Lineup Players (Which players are in which positions)
+CREATE TABLE lineup_players (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    lineup_id UUID NOT NULL REFERENCES match_lineups(id) ON DELETE CASCADE,
+    player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    position VARCHAR(10) NOT NULL, -- e.g., "GK", "DF1", "MF2", "FW3"
+    jersey_number INTEGER NOT NULL,
+    is_starter BOOLEAN DEFAULT true,
+    position_order INTEGER, -- For ordering players in formation
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(lineup_id, player_id),
+    UNIQUE(lineup_id, position)
+);
+
+-- Player Positions (Available positions in formations)
+CREATE TABLE player_positions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    position_code VARCHAR(10) NOT NULL UNIQUE, -- e.g., "GK", "DF", "MF", "FW"
+    position_name VARCHAR(50) NOT NULL, -- e.g., "Goalkeeper", "Defender"
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert default positions
+INSERT INTO player_positions (position_code, position_name, description) VALUES
+('GK', 'Goalkeeper', 'Last line of defense'),
+('DF', 'Defender', 'Defensive players'),
+('MF', 'Midfielder', 'Central players linking defense and attack'),
+('FW', 'Forward', 'Attacking players');
+
+-- Insert default formations for all teams
+INSERT INTO team_formations (team_id, formation_name, formation_structure, description, is_default) 
+SELECT 
+    id as team_id,
+    '4-3-3 Attacking' as formation_name,
+    '4-3-3' as formation_structure,
+    'Balanced attack with wing play' as description,
+    true as is_default
+FROM teams;
+
+-- Add more default formations
+INSERT INTO team_formations (team_id, formation_name, formation_structure, description) 
+SELECT 
+    id as team_id,
+    '4-4-2 Classic',
+    '4-4-2',
+    'Traditional balanced formation'
+FROM teams;
+
+INSERT INTO team_formations (team_id, formation_name, formation_structure, description) 
+SELECT 
+    id as team_id,
+    '4-2-3-1',
+    '4-2-3-1',
+    'Strong midfield control'
+FROM teams;
+
+-- Indexes for performance
+CREATE INDEX idx_match_lineups_match_team ON match_lineups(match_id, team_id);
+CREATE INDEX idx_lineup_players_lineup ON lineup_players(lineup_id);
+CREATE INDEX idx_lineup_players_player ON lineup_players(player_id);
+CREATE INDEX idx_team_formations_team ON team_formations(team_id);
+
+-- Updated_at triggers
+CREATE TRIGGER update_team_formations_updated_at BEFORE UPDATE ON team_formations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_match_lineups_updated_at BEFORE UPDATE ON match_lineups FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+consider this supabase database from now on on ourchat
+
+okay
+
+yes/no
+
