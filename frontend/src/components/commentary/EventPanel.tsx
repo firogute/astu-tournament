@@ -61,21 +61,21 @@ const EventPanel = ({
     }
   };
 
-  const renderEventCategory = (category, title, icon: Icon) => (
+  const renderEventCategory = (category, title, Icon) => (
     <div>
-      <h3 className="font-semibold mb-3 flex items-center gap-2">
-        <icon className="h-4 w-4" />
+      <h3 className="font-semibold mb-2 md:mb-3 flex items-center gap-1 md:gap-2 text-sm md:text-base">
+        <Icon className="h-3 w-3 md:h-4 md:w-4" />
         {title}
       </h3>
       <div
-        className={`grid grid-cols-1 ${
-          category.length > 1 ? "sm:grid-cols-3" : ""
-        } gap-2`}
+        className={`grid grid-cols-2 ${
+          category.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"
+        } gap-1 md:gap-2`}
       >
         {category.map((event) => (
           <Button
             key={event.type}
-            className={`h-16 flex flex-col gap-1 text-xs ${event.color} text-white`}
+            className={`h-12 md:h-16 flex flex-col gap-0.5 md:gap-1 text-xs ${event.color} text-white`}
             onClick={() =>
               event.type === "substitution_in"
                 ? openEventModal(event.type)
@@ -83,8 +83,10 @@ const EventPanel = ({
             }
             disabled={!selectedTeam || addEventMutation.isLoading}
           >
-            <event.icon className="h-4 w-4" />
-            <span>{event.label}</span>
+            <event.icon className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="text-[10px] md:text-xs leading-tight">
+              {event.label}
+            </span>
           </Button>
         ))}
       </div>
@@ -92,8 +94,8 @@ const EventPanel = ({
   );
 
   return (
-    <Card className="p-6">
-      <div className="space-y-4">
+    <Card className="p-4 md:p-6">
+      <div className="space-y-3 md:space-y-4">
         {renderEventCategory(eventCategories.goals, "Goals & Scoring", Target)}
         {renderEventCategory(
           eventCategories.cards,

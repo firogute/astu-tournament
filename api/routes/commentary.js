@@ -4,6 +4,35 @@ import { authenticateJWT, authorizeRoles } from "../middleware/auth.js";
 
 const router = Router();
 
+// Background service to auto-increment minutes for live matches
+const startMinuteService = () => {
+  setInterval(async () => {
+    try {
+      const { data: liveMatches } = await supabase
+        .from("matches")
+        .select("id, minute, status")
+        .in("status", ["first_half", "second_half", "extra_time"]);
+
+      if (liveMatches && liveMatches.length > 0) {
+        for (const match of liveMatches) {
+          await supabase
+            .from("matches")
+            .update({
+              minute: Math.min(match.minute + 1, 120),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", match.id);
+        }
+      }
+    } catch (error) {
+      console.error("Minute service error:", error);
+    }
+  }, 60000); // Every minute
+};
+
+// Start the service when server starts
+startMinuteService();
+
 // Debounce utility to prevent frequent updates
 const debounce = (func, wait) => {
   let timeout;
@@ -949,8 +978,6 @@ const generateTimeline = (events = [], commentary = []) => {
   });
 };
 
-// Add these routes to your commentary.js file:
-
 // Get live matches for commentary
 router.get("/matches", authenticateJWT, async (req, res) => {
   try {
@@ -1046,5 +1073,177 @@ router.get("/matches/live", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// Start commentary - sets match to live with current date/time
+router.post(
+  "/:matchId/start",
+  authenticateJWT,
+  authorizeRoles("admin", "manager", "commentator"),
+  async (req, res) => {
+    try {
+      const { matchId } = req.params;
+      const now = new Date();
+
+      const { data: match, error } = await supabase
+        .from("matches")
+        .update({
+          status: "first_half",
+          minute: 1,
+          match_date: now.toISOString().split("T")[0],
+          match_time: now.toTimeString().split(" ")[0],
+          updated_at: now.toISOString(),
+        })
+        .eq("id", matchId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.json({
+        message: "Commentary started successfully",
+        match,
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// Pause commentary
+router.post(
+  "/:matchId/pause",
+  authenticateJWT,
+  authorizeRoles("admin", "manager", "commentator"),
+  async (req, res) => {
+    try {
+      const { matchId } = req.params;
+
+      const { data: match, error } = await supabase
+        .from("matches")
+        .update({
+          status: "half_time",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", matchId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.json({ message: "Commentary paused", match });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// Resume commentary
+router.post(
+  "/:matchId/resume",
+  authenticateJWT,
+  authorizeRoles("admin", "manager", "commentator"),
+  async (req, res) => {
+    try {
+      const { matchId } = req.params;
+
+      const { data: match, error } = await supabase
+        .from("matches")
+        .update({
+          status: "second_half",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", matchId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.json({ message: "Commentary resumed", match });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// Auto-increment minute (for offline mode)
+router.post(
+  "/:matchId/increment-minute",
+  authenticateJWT,
+  authorizeRoles("admin", "manager", "commentator"),
+  async (req, res) => {
+    try {
+      const { matchId } = req.params;
+      const { increment = 1 } = req.body;
+
+      // Get current match
+      const { data: match, error: fetchError } = await supabase
+        .from("matches")
+        .select("minute, status")
+        .eq("id", matchId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      let newMinute = Math.min((match.minute || 0) + increment, 90);
+      let newStatus = match.status;
+
+      // Auto-update status based on minute
+      if (newMinute > 45 && match.status === "first_half") {
+        newStatus = "half_time";
+      } else if (newMinute > 90 && match.status === "second_half") {
+        newStatus = "full_time";
+      }
+
+      const { data: updatedMatch, error } = await supabase
+        .from("matches")
+        .update({
+          minute: newMinute,
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", matchId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.json({
+        message: "Minute incremented",
+        match: updatedMatch,
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// End match (set to full_time)
+router.post(
+  "/:matchId/end",
+  authenticateJWT,
+  authorizeRoles("admin", "manager", "commentator"),
+  async (req, res) => {
+    try {
+      const { matchId } = req.params;
+
+      const { data: match, error } = await supabase
+        .from("matches")
+        .update({
+          status: "full_time",
+          minute: 90,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", matchId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.xjson({ message: "Match ended", match });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
 
 export default router;

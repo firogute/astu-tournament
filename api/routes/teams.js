@@ -9,7 +9,7 @@ router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase.from("teams").select("*");
     if (error) return res.status(400).json({ error: error.message });
-    res.json({ success: true, data }); // Add success: true
+    res.json({ success: true, data });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -26,7 +26,29 @@ router.get("/:id", async (req, res) => {
       .single();
     if (error || !data)
       return res.status(404).json({ error: "Team not found" });
-    res.json({ success: true, data }); // Add success: true
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET players by team ID - ADD THIS ROUTE
+router.get("/:id/players", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get players for the team
+    const { data: players, error } = await supabase
+      .from("players")
+      .select("*")
+      .eq("team_id", id)
+      .eq("is_active", true)
+      .order("jersey_number", { ascending: true });
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.json({ success: true, data: players || [] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

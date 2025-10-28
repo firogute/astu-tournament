@@ -1,4 +1,3 @@
-// components/MatchController.jsx
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,14 +15,13 @@ import {
   Pause,
   Square,
   RefreshCw,
-  Plus,
-  Minus,
   FastForward,
   SkipForward,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMatchMutations } from "@/hooks/useMatchMutations";
 import { useState, useEffect, useRef } from "react";
+import apiClient from "@/lib/api";
 
 const MatchController = ({
   matchStatus,
@@ -41,9 +39,9 @@ const MatchController = ({
 }) => {
   const { updateMatchMutation } = useMatchMutations(selectedMatch, queryClient);
   const [isRunning, setIsRunning] = useState(false);
-  const [seconds, setSeconds] = useState(0); // Track seconds separately
-  const [totalSeconds, setTotalSeconds] = useState(matchMinute * 60); // Total seconds elapsed
+  const [totalSeconds, setTotalSeconds] = useState(matchMinute * 60);
   const intervalRef = useRef(null);
+  const dbUpdateRef = useRef(null);
 
   // Convert total seconds to minutes for display (MM:SS)
   const displayMinutes = Math.floor(totalSeconds / 60);
@@ -56,15 +54,7 @@ const MatchController = ({
       .padStart(2, "0")}`;
   };
 
-  // Update matchMinute in parent component when totalSeconds changes
-  useEffect(() => {
-    const newMinutes = Math.floor(totalSeconds / 60);
-    if (newMinutes !== matchMinute) {
-      setMatchMinute(newMinutes);
-    }
-  }, [totalSeconds, matchMinute, setMatchMinute]);
-
-  // Initialize totalSeconds when matchMinute changes externally
+  // Sync from parent to child
   useEffect(() => {
     setTotalSeconds(matchMinute * 60);
   }, [matchMinute]);
@@ -83,45 +73,94 @@ const MatchController = ({
           // Auto half-time at 45 minutes
           if (matchStatus === "first_half" && newMinutes >= 45) {
             handleHalfTime();
-            return 45 * 60; // 45 minutes in seconds
+            return 45 * 60;
           }
 
           // Auto full-time at 90 minutes
           if (matchStatus === "second_half" && newMinutes >= 90) {
             handleEndMatch();
-            return 90 * 60; // 90 minutes in seconds
+            return 90 * 60;
           }
 
           return newTotalSeconds;
         });
-      }, 1000); // Real 1 second interval
+      }, 1000);
+
+      // Update database every 60 seconds (less frequent)
+      dbUpdateRef.current = setInterval(() => {
+        updateDatabaseTime();
+      }, 60000);
     } else {
       clearInterval(intervalRef.current);
+      clearInterval(dbUpdateRef.current);
     }
 
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      clearInterval(intervalRef.current);
+      clearInterval(dbUpdateRef.current);
+    };
   }, [isRunning, matchStatus]);
-
-  // Update database periodically and on important changes
-  useEffect(() => {
-    if (isRunning) {
-      // Update database every 30 seconds during auto-progression
-      const dbUpdateInterval = setInterval(() => {
-        updateDatabaseTime();
-      }, 30000); // Update DB every 30 seconds
-
-      return () => clearInterval(dbUpdateInterval);
-    }
-  }, [isRunning, totalSeconds, matchStatus]);
 
   const updateDatabaseTime = async () => {
     try {
+      const currentMinutes = Math.floor(totalSeconds / 60);
       await updateMatchMutation.mutateAsync({
-        minute: Math.floor(totalSeconds / 60),
+        minute: currentMinutes,
         status: matchStatus,
       });
+      setMatchMinute(currentMinutes);
     } catch (error) {
       console.error("Failed to update time in database:", error);
+    }
+  };
+
+  // Start commentary for scheduled/past matches
+  const handleStartCommentary = async () => {
+    try {
+      const response = await apiClient.post(
+        `/commentary/${selectedMatch}/start`
+      );
+      const updatedMatch = response.data.match;
+
+      setMatchStatus(updatedMatch.status);
+      setMatchMinute(updatedMatch.minute);
+      setTotalSeconds(updatedMatch.minute * 60);
+      setIsRunning(true);
+      toast.success("Commentary started! Match is now live.");
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to start commentary");
+    }
+  };
+
+  // Pause commentary
+  const handlePauseCommentary = async () => {
+    try {
+      const response = await apiClient.post(
+        `/commentary/${selectedMatch}/pause`
+      );
+      const updatedMatch = response.data.match;
+
+      setMatchStatus(updatedMatch.status);
+      setIsRunning(false);
+      toast.info("Commentary paused");
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to pause commentary");
+    }
+  };
+
+  // Resume commentary
+  const handleResumeCommentary = async () => {
+    try {
+      const response = await apiClient.post(
+        `/commentary/${selectedMatch}/resume`
+      );
+      const updatedMatch = response.data.match;
+
+      setMatchStatus(updatedMatch.status);
+      setIsRunning(true);
+      toast.success("Commentary resumed");
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to resume commentary");
     }
   };
 
@@ -136,40 +175,12 @@ const MatchController = ({
         minute: startMinutes,
       });
       setMatchStatus(status);
-      setMatchMinute(startMinutes);
       setTotalSeconds(startTotalSeconds);
+      setMatchMinute(startMinutes);
       setIsRunning(true);
       toast.success(
         `${half === "first_half" ? "First" : "Second"} half started!`
       );
-    } catch (error) {
-      // Error handled in mutation
-    }
-  };
-
-  const handlePause = async () => {
-    try {
-      // Update database with current time when pausing
-      await updateMatchMutation.mutateAsync({
-        status: "paused",
-        minute: Math.floor(totalSeconds / 60),
-      });
-      setMatchStatus("paused");
-      setIsRunning(false);
-      toast.info("Match paused");
-    } catch (error) {
-      // Error handled in mutation
-    }
-  };
-
-  const handleResume = async () => {
-    try {
-      await updateMatchMutation.mutateAsync({
-        status: matchStatus,
-        minute: Math.floor(totalSeconds / 60),
-      });
-      setIsRunning(true);
-      toast.success("Match resumed");
     } catch (error) {
       // Error handled in mutation
     }
@@ -185,8 +196,8 @@ const MatchController = ({
         minute: halfTimeMinutes,
       });
       setMatchStatus("half_time");
-      setMatchMinute(halfTimeMinutes);
       setTotalSeconds(halfTimeSeconds);
+      setMatchMinute(halfTimeMinutes);
       setIsRunning(false);
       toast.success("Half time!");
     } catch (error) {
@@ -203,9 +214,9 @@ const MatchController = ({
         status: "full_time",
         minute: fullTimeMinutes,
       });
-      setMatchStatus("paused");
-      setMatchMinute(fullTimeMinutes);
+      setMatchStatus("full_time");
       setTotalSeconds(fullTimeSeconds);
+      setMatchMinute(fullTimeMinutes);
       setIsRunning(false);
       toast.success("Match ended - final whistle!");
     } catch (error) {
@@ -214,19 +225,39 @@ const MatchController = ({
   };
 
   const handleTimeUpdate = async (newTotalSeconds) => {
-    const clampedSeconds = Math.max(0, Math.min(120 * 60, newTotalSeconds)); // Max 120 minutes
+    const clampedSeconds = Math.max(0, Math.min(120 * 60, newTotalSeconds));
     const newMinutes = Math.floor(clampedSeconds / 60);
 
     setTotalSeconds(clampedSeconds);
-    setMatchMinute(newMinutes);
 
     try {
       await updateMatchMutation.mutateAsync({
         minute: newMinutes,
         status: matchStatus,
       });
+      setMatchMinute(newMinutes);
     } catch (error) {
       console.error("Failed to update time:", error);
+    }
+  };
+
+  // Manual minute increment (for offline mode)
+  const handleIncrementMinute = async (increment = 1) => {
+    try {
+      const response = await apiClient.post(
+        `/commentary/${selectedMatch}/increment-minute`,
+        {
+          increment,
+        }
+      );
+      const updatedMatch = response.data.match;
+
+      setMatchMinute(updatedMatch.minute);
+      setMatchStatus(updatedMatch.status);
+      setTotalSeconds(updatedMatch.minute * 60);
+      toast.success(`Minute updated to ${updatedMatch.minute}'`);
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to update minute");
     }
   };
 
@@ -248,39 +279,31 @@ const MatchController = ({
     handleTimeUpdate(totalSeconds + seconds);
   };
 
-  const autoStartSecondHalf = async () => {
-    if (matchStatus === "half_time") {
-      await handleStartHalf("second_half");
-      toast.info("Automatically started second half");
-    }
-  };
-
-  // Auto-start second half if in halftime (after 15 minutes real time)
-  useEffect(() => {
-    if (matchStatus === "half_time") {
-      const halftimeTimer = setTimeout(() => {
-        autoStartSecondHalf();
-      }, 15 * 60 * 1000); // 15 minutes real time
-
-      return () => clearTimeout(halftimeTimer);
-    }
-  }, [matchStatus]);
+  // Check if match can be started (is scheduled or in past)
+  const canStartCommentary =
+    selectedMatchData &&
+    (selectedMatchData.status === "scheduled" ||
+      new Date(selectedMatchData.match_date) < new Date());
 
   return (
-    <Card className="p-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-        <h2 className="text-xl font-bold">Match Control</h2>
-        <div className="flex items-center gap-3">
+    <Card className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
+        <h2 className="text-lg md:text-xl font-bold">Match Control</h2>
+        <div className="flex items-center gap-2 md:gap-3">
           <Badge
-            className={`text-sm px-3 py-1 ${
+            className={`text-xs md:text-sm px-2 md:px-3 py-1 ${
               isRunning
                 ? "bg-green-500 pulse-live"
                 : matchStatus === "half_time"
                 ? "bg-orange-500"
+                : matchStatus === "scheduled"
+                ? "bg-blue-500"
                 : "bg-gray-500"
             }`}
           >
-            {matchStatus === "paused"
+            {matchStatus === "scheduled"
+              ? "SCHEDULED"
+              : matchStatus === "paused"
               ? "PAUSED"
               : matchStatus === "first_half"
               ? "1ST HALF"
@@ -294,30 +317,55 @@ const MatchController = ({
             variant="outline"
             size="sm"
             onClick={() => queryClient.invalidateQueries()}
+            className="h-8 w-8 md:h-9 md:w-9 p-0"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
         </div>
       </div>
 
+      {/* Start Commentary Button for scheduled/past matches */}
+      {canStartCommentary && (
+        <div className="mb-4 md:mb-6 p-3 md:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-center sm:text-left">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100 text-sm md:text-base">
+                Ready to Start Commentary
+              </h3>
+              <p className="text-xs md:text-sm text-blue-700 dark:text-blue-300">
+                Click start to begin live commentary
+              </p>
+            </div>
+            <Button
+              onClick={handleStartCommentary}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 gap-2 w-full sm:w-auto"
+            >
+              <Play className="h-3 w-3 md:h-4 md:w-4" />
+              Start Commentary
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Match Time Control */}
-      <div className="text-center p-6 bg-muted rounded-lg mb-6">
-        <div className="text-5xl font-bold font-mono text-primary mb-4">
+      <div className="text-center p-4 md:p-6 bg-muted rounded-lg mb-4 md:mb-6">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-bold font-mono text-primary mb-3 md:mb-4">
           {formatTime(displayMinutes, displaySeconds)}
         </div>
 
-        <div className="text-sm text-muted-foreground mb-4">
+        <div className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
           {displayMinutes}' (Elapsed:{" "}
           {formatTime(displayMinutes, displaySeconds)})
         </div>
 
         {/* Manual Time Input */}
-        <div className="flex gap-2 justify-center items-center mb-4">
+        <div className="flex gap-2 justify-center items-center mb-3 md:mb-4">
           <Input
             type="number"
             value={displayMinutes}
             onChange={handleManualMinuteChange}
-            className="w-20 text-center"
+            className="w-16 md:w-20 text-center text-sm md:text-base"
             min="0"
             max="120"
           />
@@ -325,6 +373,7 @@ const MatchController = ({
             size="sm"
             onClick={handleManualMinuteSubmit}
             disabled={updateMatchMutation.isLoading}
+            className="text-xs md:text-sm"
           >
             Set Minute
           </Button>
@@ -332,12 +381,13 @@ const MatchController = ({
 
         {/* Quick Time Controls */}
         <div className="flex flex-col gap-2">
-          <div className="flex gap-2 justify-center">
+          <div className="flex gap-1 md:gap-2 justify-center">
             <Button
               size="sm"
               variant="outline"
               onClick={() => quickSecondJump(-30)}
               disabled={updateMatchMutation.isLoading}
+              className="text-xs h-8 md:h-9"
             >
               -30s
             </Button>
@@ -346,137 +396,152 @@ const MatchController = ({
               variant="outline"
               onClick={() => quickSecondJump(30)}
               disabled={updateMatchMutation.isLoading}
+              className="text-xs h-8 md:h-9"
             >
               +30s
             </Button>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => quickTimeJump(1)}
+              onClick={() => handleIncrementMinute(1)}
               disabled={updateMatchMutation.isLoading}
+              className="text-xs h-8 md:h-9"
             >
               +1:00
             </Button>
           </div>
-          <div className="flex gap-2 justify-center">
+          <div className="flex gap-1 md:gap-2 justify-center">
             <Button
               size="sm"
               variant="outline"
-              onClick={() => quickTimeJump(5)}
+              onClick={() => handleIncrementMinute(5)}
               disabled={updateMatchMutation.isLoading}
+              className="text-xs h-8 md:h-9"
             >
-              <FastForward className="h-4 w-4" /> +5:00
+              <FastForward className="h-3 w-3 md:h-4 md:w-4" /> +5:00
             </Button>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => quickTimeJump(10)}
+              onClick={() => handleIncrementMinute(10)}
               disabled={updateMatchMutation.isLoading}
+              className="text-xs h-8 md:h-9"
             >
-              <SkipForward className="h-4 w-4" /> +10:00
+              <SkipForward className="h-3 w-3 md:h-4 md:w-4" /> +10:00
             </Button>
           </div>
         </div>
       </div>
 
       {/* Match Control Buttons */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <Button
-          size="lg"
-          onClick={() => handleStartHalf("first_half")}
-          disabled={
-            matchStatus === "first_half" ||
-            matchStatus === "second_half" ||
-            updateMatchMutation.isLoading
-          }
-          className="flex items-center justify-center gap-2"
-        >
-          <Play className="h-4 w-4" />
-          1st Half
-        </Button>
-
-        <Button
-          size="lg"
-          onClick={() => handleStartHalf("second_half")}
-          disabled={
-            matchStatus === "second_half" ||
-            matchStatus === "first_half" ||
-            updateMatchMutation.isLoading
-          }
-          className="flex items-center justify-center gap-2"
-        >
-          <Play className="h-4 w-4" />
-          2nd Half
-        </Button>
-
-        {isRunning ? (
+      {matchStatus !== "scheduled" && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6">
           <Button
-            size="lg"
-            variant="outline"
-            onClick={handlePause}
+            size="sm"
+            onClick={() => handleStartHalf("first_half")}
+            disabled={
+              matchStatus === "first_half" ||
+              matchStatus === "second_half" ||
+              updateMatchMutation.isLoading
+            }
+            className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 text-xs md:text-sm"
+          >
+            <Play className="h-3 w-3 md:h-4 md:w-4" />
+            1st Half
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => handleStartHalf("second_half")}
+            disabled={
+              matchStatus === "second_half" ||
+              matchStatus === "first_half" ||
+              updateMatchMutation.isLoading
+            }
+            className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 text-xs md:text-sm"
+          >
+            <Play className="h-3 w-3 md:h-4 md:w-4" />
+            2nd Half
+          </Button>
+
+          {isRunning ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePauseCommentary}
+              disabled={updateMatchMutation.isLoading}
+              className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 text-xs md:text-sm"
+            >
+              <Pause className="h-3 w-3 md:h-4 md:w-4" />
+              Pause
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleResumeCommentary}
+              disabled={
+                updateMatchMutation.isLoading || matchStatus === "paused"
+              }
+              className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 text-xs md:text-sm"
+            >
+              <Play className="h-3 w-3 md:h-4 md:w-4" />
+              Resume
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={
+              matchStatus === "first_half" ? handleHalfTime : handleEndMatch
+            }
             disabled={updateMatchMutation.isLoading}
-            className="flex items-center justify-center gap-2"
+            className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 text-xs md:text-sm"
           >
-            <Pause className="h-4 w-4" />
-            Pause
+            <Square className="h-3 w-3 md:h-4 md:w-4" />
+            {matchStatus === "first_half" ? "Half Time" : "End Match"}
           </Button>
-        ) : (
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={handleResume}
-            disabled={updateMatchMutation.isLoading || matchStatus === "paused"}
-            className="flex items-center justify-center gap-2"
-          >
-            <Play className="h-4 w-4" />
-            Resume
-          </Button>
-        )}
-
-        <Button
-          size="lg"
-          variant="destructive"
-          onClick={
-            matchStatus === "first_half" ? handleHalfTime : handleEndMatch
-          }
-          disabled={updateMatchMutation.isLoading}
-          className="flex items-center justify-center gap-2"
-        >
-          <Square className="h-4 w-4" />
-          {matchStatus === "first_half" ? "Half Time" : "End Match"}
-        </Button>
-      </div>
+        </div>
+      )}
 
       {/* Auto-progression status */}
       {isRunning && (
-        <div className="text-center text-sm text-green-600 mb-4">
-          ⚡ Live: Real-time progression{" "}
-          {formatTime(displayMinutes, displaySeconds)}
+        <div className="text-center text-xs md:text-sm text-green-600 mb-3 md:mb-4">
+          ⚡ Live: Real-time progression
         </div>
       )}
 
       {/* Database sync status */}
-      <div className="text-center text-xs text-muted-foreground mb-4">
+      <div className="text-center text-xs text-muted-foreground mb-3 md:mb-4">
         {updateMatchMutation.isLoading
           ? "🔄 Updating database..."
           : "✅ Database synced"}
       </div>
 
       {/* Team Selection */}
-      {selectedMatchData && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      {selectedMatchData && matchStatus !== "scheduled" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
           <div>
-            <Label className="text-sm font-medium mb-2">Select Team</Label>
+            <Label className="text-xs md:text-sm font-medium mb-1 md:mb-2">
+              Select Team
+            </Label>
             <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-              <SelectTrigger>
+              <SelectTrigger className="text-xs md:text-sm h-9 md:h-10">
                 <SelectValue placeholder="Choose team" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={selectedMatchData.home_team_id}>
-                  {selectedMatchData.home_team?.name}
+                <SelectItem
+                  value={selectedMatchData.homeTeam?.id}
+                  className="text-xs md:text-sm"
+                >
+                  {selectedMatchData.homeTeam?.name}
                 </SelectItem>
-                <SelectItem value={selectedMatchData.away_team_id}>
-                  {selectedMatchData.away_team?.name}
+                <SelectItem
+                  value={selectedMatchData.awayTeam?.id}
+                  className="text-xs md:text-sm"
+                >
+                  {selectedMatchData.awayTeam?.name}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -484,14 +549,20 @@ const MatchController = ({
 
           {selectedTeam && (
             <div>
-              <Label className="text-sm font-medium mb-2">Select Player</Label>
+              <Label className="text-xs md:text-sm font-medium mb-1 md:mb-2">
+                Select Player
+              </Label>
               <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                <SelectTrigger>
+                <SelectTrigger className="text-xs md:text-sm h-9 md:h-10">
                   <SelectValue placeholder="Choose player" />
                 </SelectTrigger>
                 <SelectContent>
                   {teamPlayers.map((player) => (
-                    <SelectItem key={player.id} value={player.id}>
+                    <SelectItem
+                      key={player.id}
+                      value={player.id}
+                      className="text-xs md:text-sm"
+                    >
                       {player.jersey_number}. {player.name} - {player.position}
                     </SelectItem>
                   ))}
@@ -499,6 +570,13 @@ const MatchController = ({
               </Select>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Offline Mode Notice */}
+      {matchStatus !== "scheduled" && !isRunning && (
+        <div className="text-center text-xs md:text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 md:p-3 rounded-lg border border-amber-200 dark:border-amber-800 mt-3 md:mt-4">
+          ⚠️ Offline Mode: Use manual controls to progress time
         </div>
       )}
     </Card>

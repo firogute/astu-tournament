@@ -55,7 +55,7 @@ router.get("/", async (req, res) => {
       venue: match.venue ? match.venue.name : "Unknown Venue",
     }));
 
-    res.json(transformedMatches); // Return array directly, not nested object
+    res.json(transformedMatches);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -304,5 +304,82 @@ router.delete(
     }
   }
 );
+
+// Get ALL matches for commentary (past, present, future)
+router.get("/matches/available", authenticateJWT, async (req, res) => {
+  try {
+    const { data: matches, error } = await supabase
+      .from("matches")
+      .select(
+        `
+        *,
+        home_team:home_team_id(*),
+        away_team:away_team_id(*),
+        venue:venue_id(*)
+      `
+      )
+      .order("match_date", { ascending: false })
+      .order("match_time", { ascending: false });
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(matches);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get live matches (currently active)
+router.get("/matches/live", authenticateJWT, async (req, res) => {
+  try {
+    const { data: matches, error } = await supabase
+      .from("matches")
+      .select(
+        `
+        *,
+        home_team:home_team_id(*),
+        away_team:away_team_id(*),
+        venue:venue_id(*)
+      `
+      )
+      .in("status", [
+        "first_half",
+        "half_time",
+        "second_half",
+        "extra_time",
+        "penalties",
+      ])
+      .order("match_date", { ascending: true });
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(matches);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get past matches for editing
+router.get("/matches/past", authenticateJWT, async (req, res) => {
+  try {
+    const { data: matches, error } = await supabase
+      .from("matches")
+      .select(
+        `
+        *,
+        home_team:home_team_id(*),
+        away_team:away_team_id(*),
+        venue:venue_id(*)
+      `
+      )
+      .order("match_date", { descending: true })
+      .limit(50);
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(matches);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 export default router;
