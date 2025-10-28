@@ -15,11 +15,12 @@ import {
   Zap,
   Play,
   Shirt,
-  Plus,
+  Calendar,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/lib/api";
 import { cn } from "@/lib/utils";
+import SoccerLineup from "react-soccer-lineup";
 
 interface Player {
   id: string;
@@ -34,9 +35,17 @@ interface Formation {
   id: string;
   name: string;
   structure: string;
-  formation: number[]; // [defenders, midfielders, forwards]
   description: string;
   difficulty: "Easy" | "Medium" | "Hard";
+}
+
+interface Match {
+  id: string;
+  match_date: string;
+  match_time: string;
+  home_team: any;
+  away_team: any;
+  tournament: any;
 }
 
 const formations: Formation[] = [
@@ -44,7 +53,6 @@ const formations: Formation[] = [
     id: "4-3-3-attacking",
     name: "4-3-3 Attacking",
     structure: "4-3-3",
-    formation: [4, 3, 3],
     description: "Balanced attack with wing play",
     difficulty: "Medium",
   },
@@ -52,7 +60,6 @@ const formations: Formation[] = [
     id: "4-4-2-flat",
     name: "4-4-2 Classic",
     structure: "4-4-2",
-    formation: [4, 4, 2],
     description: "Traditional balanced formation",
     difficulty: "Easy",
   },
@@ -60,7 +67,6 @@ const formations: Formation[] = [
     id: "3-5-2",
     name: "3-5-2",
     structure: "3-5-2",
-    formation: [3, 5, 2],
     description: "Midfield dominance",
     difficulty: "Hard",
   },
@@ -68,7 +74,6 @@ const formations: Formation[] = [
     id: "5-3-2",
     name: "5-3-2 Defensive",
     structure: "5-3-2",
-    formation: [5, 3, 2],
     description: "Solid defensive structure",
     difficulty: "Easy",
   },
@@ -76,43 +81,79 @@ const formations: Formation[] = [
     id: "4-2-3-1",
     name: "4-2-3-1",
     structure: "4-2-3-1",
-    formation: [4, 5, 1],
     description: "Strong midfield control",
     difficulty: "Medium",
   },
-  {
-    id: "3-4-3",
-    name: "3-4-3 Attacking",
-    structure: "3-4-3",
-    formation: [3, 4, 3],
-    description: "All-out attack",
-    difficulty: "Hard",
-  },
 ];
+
+// Position mapping for different formations according to react-soccer-lineup structure
+const formationPositions: Record<string, any> = {
+  "4-3-3": {
+    df: ["DF1", "DF2", "DF3", "DF4"],
+    cm: ["MF1", "MF2", "MF3"],
+    fw: ["FW1", "FW2", "FW3"],
+  },
+  "4-4-2": {
+    df: ["DF1", "DF2", "DF3", "DF4"],
+    cm: ["MF1", "MF2", "MF3", "MF4"],
+    fw: ["FW1", "FW2"],
+  },
+  "3-5-2": {
+    df: ["DF1", "DF2", "DF3"],
+    cm: ["MF1", "MF2", "MF3", "MF4", "MF5"],
+    fw: ["FW1", "FW2"],
+  },
+  "5-3-2": {
+    df: ["DF1", "DF2", "DF3", "DF4", "DF5"],
+    cm: ["MF1", "MF2", "MF3"],
+    fw: ["FW1", "FW2"],
+  },
+  "4-2-3-1": {
+    df: ["DF1", "DF2", "DF3", "DF4"],
+    cdm: ["MF1", "MF2"],
+    cam: ["MF3", "MF4", "MF5"],
+    fw: ["FW1"],
+  },
+};
 
 const LineupBuilder = () => {
   const { user } = useAuth();
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]);
+  const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<
     Record<string, Player>
   >({});
   const [selectedFormation, setSelectedFormation] = useState("4-3-3-attacking");
+  const [selectedMatch, setSelectedMatch] = useState<string>("");
   const [showNames, setShowNames] = useState(true);
   const [savedLineups, setSavedLineups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPlayers();
+    fetchData();
   }, []);
 
-  const fetchPlayers = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get("/manager/my-players");
-      setAvailablePlayers(res.data.players || []);
-      autoSelectBestPlayers(res.data.players || []);
+      const [playersRes, matchesRes, lineupsRes] = await Promise.all([
+        apiClient.get("/manager/my-players"),
+        apiClient.get("/manager/upcoming-matches"),
+        apiClient.get("/manager/lineups"),
+      ]);
+
+      setAvailablePlayers(playersRes.data.players || []);
+      setUpcomingMatches(matchesRes.data.matches || []);
+      setSavedLineups(lineupsRes.data.lineups || []);
+
+      // Auto-select first match if available
+      if (matchesRes.data.matches?.length > 0) {
+        setSelectedMatch(matchesRes.data.matches[0].id);
+      }
+
+      autoSelectBestPlayers(playersRes.data.players || []);
     } catch (err) {
-      console.error("Failed to fetch players:", err);
+      console.error("Failed to fetch data:", err);
     } finally {
       setLoading(false);
     }
@@ -120,32 +161,103 @@ const LineupBuilder = () => {
 
   const autoSelectBestPlayers = (players: Player[]) => {
     const bestPlayers: Record<string, Player> = {};
-    const positions = ["GK", "DF", "MF", "FW"];
+    const formation = formations.find((f) => f.id === selectedFormation);
+    if (!formation) return;
 
-    positions.forEach((pos) => {
-      const positionPlayers = players
-        .filter((p) => p.position === pos)
+    const positions = formationPositions[formation.structure];
+    if (!positions) return;
+
+    // Goalkeeper
+    const goalkeepers = players
+      .filter((p) => p.position === "GK")
+      .sort((a, b) => b.rating - a.rating);
+    if (goalkeepers.length > 0) {
+      bestPlayers["GK"] = goalkeepers[0];
+    }
+
+    // Defenders
+    positions.df?.forEach((pos: string, index: number) => {
+      const defenders = players
+        .filter((p) => p.position === "DF")
         .sort((a, b) => b.rating - a.rating);
-      if (positionPlayers.length > 0) {
-        bestPlayers[pos] = positionPlayers[0];
+      if (defenders.length > index) {
+        bestPlayers[pos] = defenders[index];
+      }
+    });
+
+    // Midfielders - handle different types based on formation
+    positions.cm?.forEach((pos: string, index: number) => {
+      const midfielders = players
+        .filter((p) => p.position === "MF")
+        .sort((a, b) => b.rating - a.rating);
+      if (midfielders.length > index) {
+        bestPlayers[pos] = midfielders[index];
+      }
+    });
+
+    positions.cdm?.forEach((pos: string, index: number) => {
+      const midfielders = players
+        .filter((p) => p.position === "MF")
+        .sort((a, b) => b.rating - a.rating);
+      if (midfielders.length > index) {
+        bestPlayers[pos] = midfielders[index];
+      }
+    });
+
+    positions.cam?.forEach((pos: string, index: number) => {
+      const midfielders = players
+        .filter((p) => p.position === "MF")
+        .sort((a, b) => b.rating - a.rating);
+      if (midfielders.length > index) {
+        bestPlayers[pos] = midfielders[index];
+      }
+    });
+
+    // Forwards
+    positions.fw?.forEach((pos: string, index: number) => {
+      const forwards = players
+        .filter((p) => p.position === "FW")
+        .sort((a, b) => b.rating - a.rating);
+      if (forwards.length > index) {
+        bestPlayers[pos] = forwards[index];
       }
     });
 
     setSelectedPlayers(bestPlayers);
   };
 
-  const handlePlayerSelect = (position: string, player: Player) => {
-    setSelectedPlayers((prev) => ({
-      ...prev,
-      [position]: player,
-    }));
+  const handlePlayerSelect = (position: string) => {
+    const posType = position.substring(0, 2); // GK, DF, MF, FW
+    const availableForPosition = availablePlayers.filter(
+      (p) => p.position === posType
+    );
+
+    if (availableForPosition.length > 0) {
+      const currentPlayer = selectedPlayers[position];
+      const currentIndex = availableForPosition.findIndex(
+        (p) => p.id === currentPlayer?.id
+      );
+      const nextIndex = (currentIndex + 1) % availableForPosition.length;
+      const nextPlayer = availableForPosition[nextIndex];
+
+      setSelectedPlayers((prev) => ({
+        ...prev,
+        [position]: nextPlayer,
+      }));
+    }
   };
 
   const clearLineup = () => setSelectedPlayers({});
 
   const saveLineup = async () => {
+    if (!selectedMatch) {
+      alert("Please select a match first");
+      return;
+    }
+
     try {
       const lineupData = {
+        match_id: selectedMatch,
         formation_id: selectedFormation,
         formation_structure: currentFormation.structure,
         players: Object.entries(selectedPlayers).map(([position, player]) => ({
@@ -155,27 +267,141 @@ const LineupBuilder = () => {
         })),
       };
 
-      // Save to backend
       const response = await apiClient.post("/manager/lineups", lineupData);
 
-      // Also save locally
-      const lineup = {
-        id: Date.now().toString(),
-        name: `${currentFormation.name} Lineup`,
-        formation: currentFormation,
-        players: selectedPlayers,
-        created: new Date().toISOString(),
-      };
-      setSavedLineups((prev) => [lineup, ...prev.slice(0, 4)]);
+      // Refresh saved lineups
+      const lineupsRes = await apiClient.get("/manager/lineups");
+      setSavedLineups(lineupsRes.data.lineups || []);
 
       console.log("Lineup saved successfully:", response.data);
-    } catch (error) {
+      alert("Lineup saved successfully!");
+    } catch (error: any) {
       console.error("Failed to save lineup:", error);
+      alert(
+        `Failed to save lineup: ${error.response?.data?.error || error.message}`
+      );
     }
   };
 
   const currentFormation =
     formations.find((f) => f.id === selectedFormation) || formations[0];
+  const selectedMatchData = upcomingMatches.find((m) => m.id === selectedMatch);
+
+  // Prepare data for SoccerLineup component according to library API
+  const getLineupData = () => {
+    const positions = formationPositions[currentFormation.structure];
+    if (!positions) return { homeTeam: undefined, awayTeam: undefined };
+
+    const squad: any = {};
+
+    // Goalkeeper
+    if (selectedPlayers["GK"]) {
+      squad.gk = {
+        name: showNames ? selectedPlayers["GK"].name : "",
+        number: selectedPlayers["GK"].jersey_number,
+        onClick: () => handlePlayerSelect("GK"),
+      };
+    }
+
+    // Defenders
+    if (positions.df) {
+      squad.df = positions.df
+        .map((pos: string) => {
+          const player = selectedPlayers[pos];
+          return player
+            ? {
+                name: showNames ? player.name : "",
+                number: player.jersey_number,
+                onClick: () => handlePlayerSelect(pos),
+              }
+            : undefined;
+        })
+        .filter(Boolean);
+    }
+
+    // Midfielders
+    if (positions.cm) {
+      squad.cm = positions.cm
+        .map((pos: string) => {
+          const player = selectedPlayers[pos];
+          return player
+            ? {
+                name: showNames ? player.name : "",
+                number: player.jersey_number,
+                onClick: () => handlePlayerSelect(pos),
+              }
+            : undefined;
+        })
+        .filter(Boolean);
+    }
+
+    if (positions.cdm) {
+      squad.cdm = positions.cdm
+        .map((pos: string) => {
+          const player = selectedPlayers[pos];
+          return player
+            ? {
+                name: showNames ? player.name : "",
+                number: player.jersey_number,
+                onClick: () => handlePlayerSelect(pos),
+              }
+            : undefined;
+        })
+        .filter(Boolean);
+    }
+
+    if (positions.cam) {
+      squad.cam = positions.cam
+        .map((pos: string) => {
+          const player = selectedPlayers[pos];
+          return player
+            ? {
+                name: showNames ? player.name : "",
+                number: player.jersey_number,
+                onClick: () => handlePlayerSelect(pos),
+              }
+            : undefined;
+        })
+        .filter(Boolean);
+    }
+
+    // Forwards
+    if (positions.fw) {
+      squad.fw = positions.fw
+        .map((pos: string) => {
+          const player = selectedPlayers[pos];
+          return player
+            ? {
+                name: showNames ? player.name : "",
+                number: player.jersey_number,
+                onClick: () => handlePlayerSelect(pos),
+              }
+            : undefined;
+        })
+        .filter(Boolean);
+    }
+
+    return {
+      homeTeam: {
+        squad: squad,
+        style: {
+          color: "#3b82f6", // Blue color for home team
+          numberColor: "#ffffff",
+          nameColor: "#ffffff",
+        },
+      },
+      awayTeam: {
+        squad: {},
+        style: {
+          color: "#ef4444", // Red color for away team (empty)
+          numberColor: "#ffffff",
+          nameColor: "#ffffff",
+        },
+      },
+    };
+  };
+
+  const lineupData = getLineupData();
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -199,110 +425,6 @@ const LineupBuilder = () => {
     };
     return (
       colors[position as keyof typeof colors] || "bg-gray-100 text-gray-800"
-    );
-  };
-
-  // Football Pitch Component
-  const FootballPitch = () => {
-    const [defenders, midfielders, forwards] = currentFormation.formation;
-
-    const renderPlayerSpot = (
-      position: string,
-      row: number,
-      index: number,
-      total: number
-    ) => {
-      const player = selectedPlayers[position];
-      const availableForPosition = availablePlayers.filter(
-        (p) => p.position === position.substring(0, 2) // GK, DF, MF, FW
-      );
-
-      return (
-        <div
-          key={position}
-          className="flex flex-col items-center cursor-pointer group"
-          onClick={() => {
-            if (availableForPosition.length > 0) {
-              const bestPlayer = availableForPosition.sort(
-                (a, b) => b.rating - a.rating
-              )[0];
-              handlePlayerSelect(position, bestPlayer);
-            }
-          }}
-        >
-          <div
-            className={cn(
-              "w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 flex items-center justify-center transition-all duration-300",
-              player
-                ? "bg-white border-blue-500 shadow-lg scale-110"
-                : "bg-white/20 border-white/40 hover:border-white hover:scale-110"
-            )}
-          >
-            {player ? (
-              <span className="font-bold text-blue-600 text-sm">
-                {player.jersey_number}
-              </span>
-            ) : (
-              <Plus className="w-4 h-4 text-white/60" />
-            )}
-          </div>
-          {showNames && player && (
-            <div className="mt-1 bg-black/50 text-white text-xs px-2 py-1 rounded-full max-w-20 truncate">
-              {player.name.split(" ")[0]}
-            </div>
-          )}
-          {!player && (
-            <div className="mt-1 text-white/60 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-              {position}
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    return (
-      <div className="w-full bg-green-600 rounded-xl p-4 sm:p-6 border-4 border-green-700 relative overflow-hidden">
-        {/* Pitch Markings */}
-        <div className="absolute inset-4 border-2 border-white/30 rounded-lg"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white/30 rounded-full"></div>
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-8 border-2 border-white/30"></div>
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-8 border-2 border-white/30"></div>
-        <div className="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-white/30"></div>
-
-        {/* Player Rows */}
-        <div className="relative z-10 h-64 sm:h-80 flex flex-col justify-between">
-          {/* Forwards */}
-          <div className="flex justify-around">
-            {Array.from({ length: forwards }, (_, i) =>
-              renderPlayerSpot(`FW${i + 1}`, 1, i, forwards)
-            )}
-          </div>
-
-          {/* Midfielders */}
-          <div className="flex justify-around">
-            {Array.from({ length: midfielders }, (_, i) =>
-              renderPlayerSpot(`MF${i + 1}`, 2, i, midfielders)
-            )}
-          </div>
-
-          {/* Defenders */}
-          <div className="flex justify-around">
-            {Array.from({ length: defenders }, (_, i) =>
-              renderPlayerSpot(`DF${i + 1}`, 3, i, defenders)
-            )}
-          </div>
-
-          {/* Goalkeeper */}
-          <div className="flex justify-center">
-            {renderPlayerSpot("GK", 4, 0, 1)}
-          </div>
-        </div>
-
-        {/* Formation Badge */}
-        <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-mono">
-          {currentFormation.structure}
-        </div>
-      </div>
     );
   };
 
@@ -365,6 +487,34 @@ const LineupBuilder = () => {
         </div>
       </div>
 
+      {/* Match Selection */}
+      {upcomingMatches.length > 0 && (
+        <Card className="p-4 border-0 shadow-lg">
+          <h3 className="font-bold flex items-center gap-2 mb-3 text-sm sm:text-base">
+            <Calendar className="w-4 h-4" />
+            Select Match
+          </h3>
+          <select
+            value={selectedMatch}
+            onChange={(e) => setSelectedMatch(e.target.value)}
+            className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800"
+          >
+            {upcomingMatches.map((match) => (
+              <option key={match.id} value={match.id}>
+                {new Date(match.match_date).toLocaleDateString()} -{" "}
+                {match.home_team?.name} vs {match.away_team?.name}
+              </option>
+            ))}
+          </select>
+          {selectedMatchData && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              {selectedMatchData.tournament?.name} •{" "}
+              {selectedMatchData.tournament?.season}
+            </div>
+          )}
+        </Card>
+      )}
+
       <div className="grid lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Formation Selector */}
         <div className="lg:col-span-1 space-y-4">
@@ -374,49 +524,44 @@ const LineupBuilder = () => {
               Formations
             </h3>
 
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid grid-cols-2 w-full h-9">
-                <TabsTrigger value="all" className="text-xs">
-                  All
-                </TabsTrigger>
-                <TabsTrigger value="popular" className="text-xs">
-                  Popular
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="all" className="mt-3 space-y-2">
-                {formations.map((formation) => (
-                  <Card
-                    key={formation.id}
-                    className={cn(
-                      "p-3 cursor-pointer transition-all duration-300 border-2",
-                      formation.id === selectedFormation
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg"
-                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
-                    )}
-                    onClick={() => setSelectedFormation(formation.id)}
-                  >
-                    <CardContent className="p-0 text-center">
-                      <div className="text-lg font-bold text-slate-900 dark:text-white">
-                        {formation.structure}
-                      </div>
-                      <div className="text-xs text-muted-foreground mb-2 truncate">
-                        {formation.name}
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "text-xs",
-                          getDifficultyColor(formation.difficulty)
-                        )}
-                      >
-                        {formation.difficulty}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                ))}
-              </TabsContent>
-            </Tabs>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {formations.map((formation) => (
+                <Card
+                  key={formation.id}
+                  className={cn(
+                    "p-3 cursor-pointer transition-all duration-300 border-2",
+                    formation.id === selectedFormation
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg"
+                      : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                  )}
+                  onClick={() => {
+                    setSelectedFormation(formation.id);
+                    setTimeout(
+                      () => autoSelectBestPlayers(availablePlayers),
+                      100
+                    );
+                  }}
+                >
+                  <CardContent className="p-0 text-center">
+                    <div className="text-lg font-bold text-slate-900 dark:text-white">
+                      {formation.structure}
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-2 truncate">
+                      {formation.name}
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "text-xs",
+                        getDifficultyColor(formation.difficulty)
+                      )}
+                    >
+                      {formation.difficulty}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </Card>
 
           {/* Formation Details */}
@@ -439,21 +584,9 @@ const LineupBuilder = () => {
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Defenders:</span>
+                <span className="text-muted-foreground">Players Selected:</span>
                 <span className="font-semibold">
-                  {currentFormation.formation[0]}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Midfielders:</span>
-                <span className="font-semibold">
-                  {currentFormation.formation[1]}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Forwards:</span>
-                <span className="font-semibold">
-                  {currentFormation.formation[2]}
+                  {Object.keys(selectedPlayers).length}/11
                 </span>
               </div>
             </div>
@@ -466,7 +599,18 @@ const LineupBuilder = () => {
         {/* Pitch */}
         <div className="lg:col-span-3">
           <Card className="p-4 border-0 shadow-xl">
-            <FootballPitch />
+            <div className="bg-white rounded-lg p-4 border">
+              <SoccerLineup
+                size="responsive"
+                color="#22c55e" // Green pitch
+                pattern="lines"
+                homeTeam={lineupData.homeTeam}
+                awayTeam={lineupData.awayTeam}
+              />
+            </div>
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              Click on player positions to cycle through available players
+            </div>
           </Card>
         </div>
       </div>
@@ -485,12 +629,16 @@ const LineupBuilder = () => {
                 <div className="text-center text-muted-foreground py-8">
                   <Shirt className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No players selected</p>
+                  <p className="text-xs">
+                    Select a formation to auto-fill players
+                  </p>
                 </div>
               ) : (
                 Object.entries(selectedPlayers).map(([position, player]) => (
                   <div
                     key={position}
-                    className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg border"
+                    className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg border cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                    onClick={() => handlePlayerSelect(position)}
                   >
                     <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
                       {player.jersey_number}
@@ -530,16 +678,18 @@ const LineupBuilder = () => {
                 Saved Lineups
               </h3>
               <div className="space-y-2">
-                {savedLineups.map((lineup) => (
+                {savedLineups.slice(0, 3).map((lineup) => (
                   <div
                     key={lineup.id}
                     className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
-                    <div className="font-medium text-sm">{lineup.name}</div>
+                    <div className="font-medium text-sm">
+                      {lineup.formation?.formation_name || "Lineup"}
+                    </div>
                     <div className="text-xs text-muted-foreground flex justify-between">
-                      <span>{lineup.formation.structure}</span>
+                      <span>{lineup.formation_structure}</span>
                       <span>
-                        {new Date(lineup.created).toLocaleDateString()}
+                        {new Date(lineup.created_at).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
@@ -552,6 +702,9 @@ const LineupBuilder = () => {
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               onClick={saveLineup}
+              disabled={
+                !selectedMatch || Object.keys(selectedPlayers).length === 0
+              }
               className="flex-1 gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               size="lg"
             >
