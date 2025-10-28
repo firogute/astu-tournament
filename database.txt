@@ -351,6 +351,119 @@ CREATE INDEX idx_team_formations_team ON team_formations(team_id);
 CREATE TRIGGER update_team_formations_updated_at BEFORE UPDATE ON team_formations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_match_lineups_updated_at BEFORE UPDATE ON match_lineups FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+
+-- Add substitution tracking
+CREATE TABLE match_substitutions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    player_out_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    player_in_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    minute INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add goal types and details
+ALTER TABLE match_events ADD COLUMN IF NOT EXISTS goal_type VARCHAR(20) CHECK (goal_type IN ('normal', 'penalty', 'free_kick', 'header', 'volley', 'own_goal'));
+ALTER TABLE match_events ADD COLUMN IF NOT EXISTS is_penalty_scored BOOLEAN;
+ALTER TABLE match_events ADD COLUMN IF NOT EXISTS assist_player_id UUID REFERENCES players(id);
+
+-- Function to update player stats
+CREATE OR REPLACE FUNCTION update_player_stats()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update player_match_stats when events occur
+    IF NEW.event_type = 'goal' AND NEW.goal_type != 'own_goal' THEN
+        INSERT INTO player_match_stats (match_id, player_id, team_id, goals, minutes_played)
+        VALUES (NEW.match_id, NEW.player_id, NEW.team_id, 1, NEW.minute)
+        ON CONFLICT (match_id, player_id) 
+        DO UPDATE SET 
+            goals = player_match_stats.goals + 1,
+            updated_at = CURRENT_TIMESTAMP;
+            
+        -- Update assist if exists
+        IF NEW.assist_player_id IS NOT NULL THEN
+            INSERT INTO player_match_stats (match_id, player_id, team_id, assists, minutes_played)
+            VALUES (NEW.match_id, NEW.assist_player_id, NEW.team_id, 1, NEW.minute)
+            ON CONFLICT (match_id, player_id) 
+            DO UPDATE SET 
+                assists = player_match_stats.assists + 1,
+                updated_at = CURRENT_TIMESTAMP;
+        END IF;
+        
+    ELSIF NEW.event_type = 'yellow_card' THEN
+        INSERT INTO player_match_stats (match_id, player_id, team_id, yellow_cards, minutes_played)
+        VALUES (NEW.match_id, NEW.player_id, NEW.team_id, 1, NEW.minute)
+        ON CONFLICT (match_id, player_id) 
+        DO UPDATE SET 
+            yellow_cards = player_match_stats.yellow_cards + 1,
+            updated_at = CURRENT_TIMESTAMP;
+            
+    ELSIF NEW.event_type = 'red_card' THEN
+        INSERT INTO player_match_stats (match_id, player_id, team_id, red_cards, minutes_played)
+        VALUES (NEW.match_id, NEW.player_id, NEW.team_id, 1, NEW.minute)
+        ON CONFLICT (match_id, player_id) 
+        DO UPDATE SET 
+            red_cards = player_match_stats.red_cards + 1,
+            updated_at = CURRENT_TIMESTAMP;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_player_stats_trigger
+    AFTER INSERT ON match_events
+    FOR EACH ROW
+    EXECUTE FUNCTION update_player_stats();
+
+-- Function to update match score
+CREATE OR REPLACE FUNCTION update_match_score()
+RETURNS TRIGGER AS $$
+DECLARE
+    home_team_id UUID;
+    away_team_id UUID;
+    goal_team_id UUID;
+BEGIN
+    -- Get match teams
+    SELECT home_team_id, away_team_id INTO home_team_id, away_team_id
+    FROM matches WHERE id = NEW.match_id;
+    
+    -- Determine which team scored
+    IF NEW.event_type = 'goal' THEN
+        IF NEW.goal_type = 'own_goal' THEN
+            -- Own goal: goal goes to opposite team
+            IF NEW.team_id = home_team_id THEN
+                goal_team_id := away_team_id;
+            ELSE
+                goal_team_id := home_team_id;
+            END IF;
+        ELSE
+            -- Normal goal
+            goal_team_id := NEW.team_id;
+        END IF;
+        
+        -- Update match score
+        IF goal_team_id = home_team_id THEN
+            UPDATE matches 
+            SET home_score = home_score + 1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = NEW.match_id;
+        ELSE
+            UPDATE matches 
+            SET away_score = away_score + 1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = NEW.match_id;
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_match_score_trigger
+    AFTER INSERT ON match_events
+    FOR EACH ROW
+    EXECUTE FUNCTION update_match_score();
+    
 consider this supabase database from now on on ourchat
 
 okay
